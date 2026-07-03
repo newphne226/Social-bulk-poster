@@ -22,6 +22,8 @@ import {
   Layers,
   Cloud,
   Star,
+  Wallet,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -588,7 +590,48 @@ function PricingPage({ onGetStarted }: { onGetStarted: () => void }) {
           })}
         </div>
 
-        <div className="mt-16 max-w-3xl mx-auto rounded-2xl border bg-muted/30 p-8">
+        {/* Crypto payment option */}
+        <div className="mt-10 max-w-3xl mx-auto rounded-2xl border border-[#f3ba2f]/40 bg-gradient-to-br from-[#f3ba2f]/10 via-[#f3ba2f]/5 to-transparent p-6 md:p-8">
+          <div className="flex flex-col md:flex-row items-start gap-6">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-[#f3ba2f]/20 flex items-center justify-center shrink-0">
+                <Wallet className="h-6 w-6 text-[#f3ba2f]" />
+              </div>
+              <div>
+                <Badge variant="outline" className="text-[10px] bg-[#f3ba2f]/10 text-[#b8860b] border-[#f3ba2f]/30 mb-1">
+                  Crypto Payment
+                </Badge>
+                <h3 className="text-lg font-semibold">Pay with USDT (BEP20)</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">No card required · No KYC · Instant activation</p>
+              </div>
+            </div>
+            <div className="flex-1 text-sm">
+              <p className="text-muted-foreground">
+                Prefer to pay with crypto? We accept <span className="font-medium text-foreground">USDT on the Binance Smart Chain (BEP20)</span> for any subscription.
+                Register, head to Billing → Crypto, and send the exact amount to your deposit address.
+              </p>
+              <div className="mt-3 rounded-lg bg-background/60 border border-[#f3ba2f]/20 p-3 font-mono text-xs break-all">
+                <div className="text-[10px] text-muted-foreground mb-1">Deposit address</div>
+                0x3bab639ebab9cfb034a199b023376cc8e6390588
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button size="sm" onClick={onGetStarted}>
+                  Get started with crypto
+                </Button>
+                <a
+                  href="https://bscscan.com/address/0x3bab639ebab9cfb034a199b023376cc8e6390588"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:underline self-center px-2"
+                >
+                  <ExternalLink className="h-3 w-3" /> View on BscScan
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 max-w-3xl mx-auto rounded-2xl border bg-muted/30 p-8">
           <div className="flex items-start gap-4">
             <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
               <Star className="h-6 w-6 text-amber-500" />

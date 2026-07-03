@@ -11,6 +11,7 @@ import {
   Image,
   Bot,
   CreditCard,
+  Wallet,
   Settings,
   Bell,
   Shield,
@@ -61,6 +62,13 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -90,6 +98,12 @@ import {
   type MockPost,
   type MockSocialAccount,
 } from "@/lib/mock-data";
+import {
+  CryptoPayment,
+  CryptoPaymentStatus,
+  CRYPTO_CONFIG,
+  type CryptoPaymentSession,
+} from "@/components/crypto-payment";
 
 type DashSection =
   | "overview"
@@ -1188,6 +1202,9 @@ function AISection() {
 // ---------------------------------------------------------------------
 
 function BillingSection() {
+  const [payMethod, setPayMethod] = React.useState<"card" | "crypto">("card");
+  const [cryptoSession, setCryptoSession] = React.useState<CryptoPaymentSession | null>(null);
+
   return (
     <div className="space-y-6">
       <div>
@@ -1195,22 +1212,108 @@ function BillingSection() {
         <p className="text-sm text-muted-foreground">Manage your payment methods and billing details</p>
       </div>
 
+      {/* Payment method tabs */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold">Payment Method</h3>
+          <Tabs value={payMethod} onValueChange={(v) => setPayMethod(v as "card" | "crypto")}>
+            <TabsList>
+              <TabsTrigger value="card" className="text-xs">
+                <CreditCard className="h-3 w-3 mr-1" /> Card
+              </TabsTrigger>
+              <TabsTrigger value="crypto" className="text-xs">
+                <Wallet className="h-3 w-3 mr-1" /> Crypto
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {payMethod === "card" ? (
+          <>
+            <div className="flex items-center gap-3 rounded-lg border p-4">
+              <div className="h-10 w-14 rounded bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white text-xs font-bold">VISA</div>
+              <div className="flex-1">
+                <div className="font-medium text-sm">Visa ending in 4242</div>
+                <div className="text-xs text-muted-foreground">Expires 12/2027</div>
+              </div>
+              <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">Default</Badge>
+              <Button variant="outline" size="sm">Edit</Button>
+            </div>
+            <Button variant="outline" size="sm" className="mt-3"><Plus className="h-3.5 w-3.5 mr-1" /> Add card</Button>
+          </>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 rounded-lg border border-[#f3ba2f]/30 bg-[#f3ba2f]/5 p-4">
+              <div className="h-10 w-10 rounded-full bg-[#f3ba2f]/15 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-[#f3ba2f]" />
+              </div>
+              <div className="flex-1">
+                <div className="font-medium text-sm flex items-center gap-2">
+                  USDT
+                  <Badge variant="outline" className="text-[10px] bg-[#f3ba2f]/10 text-[#b8860b] border-[#f3ba2f]/30">BEP20</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground font-mono truncate">
+                  {CRYPTO_CONFIG.depositAddress.slice(0, 10)}...{CRYPTO_CONFIG.depositAddress.slice(-8)}
+                </div>
+              </div>
+              <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">Active</Badge>
+              <Button variant="outline" size="sm" onClick={() => setPayMethod("crypto")}>Deposit</Button>
+            </div>
+            <div className="rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground">
+              Pay with USDT on the Binance Smart Chain (BEP20). No card required, no KYC, instant activation after on-chain confirmation.
+              Click <span className="font-medium text-foreground">Deposit</span> to fund your balance or pay for a subscription directly with crypto.
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Crypto deposit panel — always visible under the tabs when crypto is selected */}
+      {payMethod === "crypto" && (
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold">Deposit USDT (BEP20)</h3>
+              <p className="text-xs text-muted-foreground">Fund your wallet balance or pay for a subscription</p>
+            </div>
+            <Badge variant="outline" className="text-[10px] bg-[#f3ba2f]/10 text-[#b8860b] border-[#f3ba2f]/30">
+              {CRYPTO_CONFIG.asset} · {CRYPTO_CONFIG.network}
+            </Badge>
+          </div>
+
+          {cryptoSession ? (
+            <CryptoPaymentStatus session={cryptoSession} />
+          ) : (
+            <CryptoPayment
+              amount={10}
+              description="Wallet top-up — VIP Pro monthly subscription"
+              onPaymentSent={(txHash) => {
+                setCryptoSession({
+                  id: `cp_${Date.now().toString(36)}`,
+                  amount: 10,
+                  amountUsd: 10,
+                  plan: "VIP Pro",
+                  cycle: "monthly",
+                  status: "confirming",
+                  createdAt: new Date().toISOString(),
+                  expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                  txHash,
+                  confirmations: 0,
+                });
+                toast.success("Payment submitted — confirming on-chain");
+              }}
+            />
+          )}
+
+          {cryptoSession && (
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => setCryptoSession(null)}>
+              Start another deposit
+            </Button>
+          )}
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="p-6 lg:col-span-2">
-          <h3 className="font-semibold mb-4">Payment Method</h3>
-          <div className="flex items-center gap-3 rounded-lg border p-4">
-            <div className="h-10 w-14 rounded bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white text-xs font-bold">VISA</div>
-            <div className="flex-1">
-              <div className="font-medium text-sm">Visa ending in 4242</div>
-              <div className="text-xs text-muted-foreground">Expires 12/2027</div>
-            </div>
-            <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">Default</Badge>
-            <Button variant="outline" size="sm">Edit</Button>
-          </div>
-          <Button variant="outline" size="sm" className="mt-3"><Plus className="h-3.5 w-3.5 mr-1" /> Add payment method</Button>
-
-          <Separator className="my-6" />
-
           <h3 className="font-semibold mb-4">Billing Address</h3>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div><Label className="text-xs">Name</Label><Input className="mt-1 h-9" defaultValue="Alex Morgan" /></div>
@@ -1228,6 +1331,7 @@ function BillingSection() {
             <div className="flex justify-between"><span className="text-muted-foreground">Plan</span><span className="font-medium">VIP Pro</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Billing</span><span className="font-medium">Monthly</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-medium">$10.00</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Payment</span><span className="font-medium">Card · Visa 4242</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Next charge</span><span className="font-medium">Aug 1, 2026</span></div>
             <Separator />
             <div className="rounded-lg bg-amber-500/10 p-3 text-xs">
@@ -1235,6 +1339,9 @@ function BillingSection() {
               <div className="text-muted-foreground mt-1">SUMMER20 — 20% off for 3 months</div>
             </div>
             <Button variant="outline" size="sm" className="w-full"><Sparkles className="h-3.5 w-3.5 mr-1" /> Redeem coupon</Button>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => setPayMethod("crypto")}>
+              <Wallet className="h-3.5 w-3.5 mr-1" /> Switch to crypto
+            </Button>
           </div>
         </Card>
       </div>
@@ -1243,6 +1350,9 @@ function BillingSection() {
 }
 
 function SubscriptionSection() {
+  const [cryptoCheckout, setCryptoCheckout] = React.useState<{ plan: string; amount: number; cycle: "monthly" | "yearly" } | null>(null);
+  const [cryptoSession, setCryptoSession] = React.useState<CryptoPaymentSession | null>(null);
+
   return (
     <div className="space-y-6">
       <div>
@@ -1269,9 +1379,15 @@ function SubscriptionSection() {
           <div><div className="text-xs text-muted-foreground">Media storage</div><div className="font-semibold">20 GB</div></div>
         </div>
         <div className="mt-6 flex flex-wrap gap-2">
-          <Button variant="outline" size="sm">Switch to yearly (save 17%)</Button>
+          <Button variant="outline" size="sm" onClick={() => setCryptoCheckout({ plan: "VIP Pro", amount: 100, cycle: "yearly" })}>
+            <Calendar className="h-3.5 w-3.5 mr-1" /> Switch to yearly (save 17%)
+          </Button>
           <Button variant="outline" size="sm">Downgrade</Button>
           <Button variant="ghost" size="sm" className="text-red-600">Cancel subscription</Button>
+          <Separator orientation="vertical" className="h-6" />
+          <Button variant="outline" size="sm" onClick={() => setCryptoCheckout({ plan: "VIP Pro", amount: 10, cycle: "monthly" })}>
+            <Wallet className="h-3.5 w-3.5 mr-1" /> Renew with crypto
+          </Button>
         </div>
       </Card>
 
@@ -1279,63 +1395,186 @@ function SubscriptionSection() {
         <h3 className="font-semibold mb-4">Available plans</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {[
-            { name: "Free", price: "$0", current: false, features: ["1 platform", "1 account", "10 posts"] },
-            { name: "Silver", price: "$3", current: false, features: ["2 platforms", "10 accounts/platform", "Unlimited posts"] },
-            { name: "VIP Pro", price: "$10", current: true, features: ["Unlimited platforms", "100 accounts/platform", "AI features"] },
+            { name: "Free", price: 0, current: false, features: ["1 platform", "1 account", "10 posts"] },
+            { name: "Silver", price: 3, current: false, features: ["2 platforms", "10 accounts/platform", "Unlimited posts"] },
+            { name: "VIP Pro", price: 10, current: true, features: ["Unlimited platforms", "100 accounts/platform", "AI features"] },
           ].map((p) => (
             <div key={p.name} className={cn("rounded-lg border p-4", p.current && "border-amber-500 bg-amber-500/5")}>
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold">{p.name}</h4>
                 {p.current && <Badge className="text-[10px]">Current</Badge>}
               </div>
-              <div className="text-2xl font-bold mt-2">{p.price}<span className="text-xs font-normal text-muted-foreground">/mo</span></div>
+              <div className="text-2xl font-bold mt-2">${p.price}<span className="text-xs font-normal text-muted-foreground">/mo</span></div>
               <ul className="mt-3 space-y-1.5 text-xs">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-emerald-500" /> {f}</li>
                 ))}
               </ul>
+              {!p.current && p.price > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full"
+                  onClick={() => setCryptoCheckout({ plan: p.name, amount: p.price, cycle: "monthly" })}
+                >
+                  <Wallet className="h-3 w-3 mr-1" /> Pay with crypto
+                </Button>
+              )}
             </div>
           ))}
         </div>
       </Card>
+
+      {/* Crypto checkout dialog */}
+      <Dialog open={!!cryptoCheckout} onOpenChange={(open) => { if (!open) { setCryptoCheckout(null); setCryptoSession(null); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-[#f3ba2f]" />
+              Pay with Crypto · USDT (BEP20)
+            </DialogTitle>
+            <DialogDescription>
+              Send USDT on the Binance Smart Chain to upgrade your subscription. Your plan activates automatically after on-chain confirmation (~3 minutes).
+            </DialogDescription>
+          </DialogHeader>
+
+          {cryptoCheckout && (
+            cryptoSession ? (
+              <CryptoPaymentStatus session={cryptoSession} />
+            ) : (
+              <CryptoPayment
+                amount={cryptoCheckout.amount}
+                description={`${cryptoCheckout.plan} — ${cryptoCheckout.cycle === "yearly" ? "Yearly" : "Monthly"} subscription`}
+                onPaymentSent={(txHash) => {
+                  setCryptoSession({
+                    id: `cp_${Date.now().toString(36)}`,
+                    amount: cryptoCheckout.amount,
+                    amountUsd: cryptoCheckout.amount,
+                    plan: cryptoCheckout.plan,
+                    cycle: cryptoCheckout.cycle,
+                    status: "confirming",
+                    createdAt: new Date().toISOString(),
+                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                    txHash,
+                    confirmations: 0,
+                  });
+                  toast.success("Payment submitted — confirming on-chain");
+                }}
+              />
+            )
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 function InvoicesSection() {
+  const cryptoTxs = [
+    { id: "cp_a1b2c3", date: "2026-07-01", amount: 10, plan: "VIP Pro — Monthly", status: "confirmed", txHash: "0x4f2e...8a91", confirmations: 24 },
+    { id: "cp_d4e5f6", date: "2026-06-01", amount: 10, plan: "VIP Pro — Monthly", status: "confirmed", txHash: "0x9c1d...3b27", confirmations: 13421 },
+    { id: "cp_g7h8i9", date: "2026-05-15", amount: 3, plan: "Silver — Monthly top-up", status: "confirmed", txHash: "0x2a8f...e144", confirmations: 41200 },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Invoices</h2>
-        <p className="text-sm text-muted-foreground">Download past invoices for your records</p>
+        <h2 className="text-2xl font-bold tracking-tight">Invoices & Transactions</h2>
+        <p className="text-sm text-muted-foreground">Card invoices and crypto payment history</p>
       </div>
 
-      <Card className="overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-xs text-muted-foreground">
-            <tr>
-              <th className="text-left p-3 font-medium">Invoice</th>
-              <th className="text-left p-3 font-medium">Date</th>
-              <th className="text-left p-3 font-medium">Plan</th>
-              <th className="text-left p-3 font-medium">Amount</th>
-              <th className="text-left p-3 font-medium">Status</th>
-              <th className="p-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {MOCK_INVOICES.map((inv) => (
-              <tr key={inv.id} className="border-t hover:bg-muted/30">
-                <td className="p-3 font-mono text-xs">{inv.id}</td>
-                <td className="p-3 text-muted-foreground">{new Date(inv.date).toLocaleDateString()}</td>
-                <td className="p-3">{inv.plan}</td>
-                <td className="p-3 font-medium">${inv.amount}.00</td>
-                <td className="p-3"><Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 capitalize">{inv.status}</Badge></td>
-                <td className="p-3"><Button variant="ghost" size="sm" className="h-7 text-xs"><FileText className="h-3 w-3 mr-1" /> PDF</Button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+      <Tabs defaultValue="card">
+        <TabsList>
+          <TabsTrigger value="card" className="text-xs"><CreditCard className="h-3 w-3 mr-1" /> Card Invoices</TabsTrigger>
+          <TabsTrigger value="crypto" className="text-xs"><Wallet className="h-3 w-3 mr-1" /> Crypto Transactions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="card" className="mt-4">
+          <Card className="overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-xs text-muted-foreground">
+                <tr>
+                  <th className="text-left p-3 font-medium">Invoice</th>
+                  <th className="text-left p-3 font-medium">Date</th>
+                  <th className="text-left p-3 font-medium">Plan</th>
+                  <th className="text-left p-3 font-medium">Amount</th>
+                  <th className="text-left p-3 font-medium">Status</th>
+                  <th className="p-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {MOCK_INVOICES.map((inv) => (
+                  <tr key={inv.id} className="border-t hover:bg-muted/30">
+                    <td className="p-3 font-mono text-xs">{inv.id}</td>
+                    <td className="p-3 text-muted-foreground">{new Date(inv.date).toLocaleDateString()}</td>
+                    <td className="p-3">{inv.plan}</td>
+                    <td className="p-3 font-medium">${inv.amount}.00</td>
+                    <td className="p-3"><Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 capitalize">{inv.status}</Badge></td>
+                    <td className="p-3"><Button variant="ghost" size="sm" className="h-7 text-xs"><FileText className="h-3 w-3 mr-1" /> PDF</Button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="crypto" className="mt-4 space-y-4">
+          <Card className="overflow-hidden">
+            <div className="flex items-center justify-between p-3 border-b bg-muted/30">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-full bg-[#f3ba2f]/15 flex items-center justify-center">
+                  <Wallet className="h-4 w-4 text-[#f3ba2f]" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium">USDT (BEP20) transactions</div>
+                  <div className="text-[10px] text-muted-foreground">All deposits to {CRYPTO_CONFIG.depositAddress.slice(0, 8)}...{CRYPTO_CONFIG.depositAddress.slice(-6)}</div>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-[10px] bg-[#f3ba2f]/10 text-[#b8860b] border-[#f3ba2f]/30">
+                {CRYPTO_CONFIG.network}
+              </Badge>
+            </div>
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-xs text-muted-foreground">
+                <tr>
+                  <th className="text-left p-3 font-medium">ID</th>
+                  <th className="text-left p-3 font-medium">Date</th>
+                  <th className="text-left p-3 font-medium">Description</th>
+                  <th className="text-left p-3 font-medium">Amount</th>
+                  <th className="text-left p-3 font-medium">TX Hash</th>
+                  <th className="text-left p-3 font-medium">Conf.</th>
+                  <th className="text-left p-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cryptoTxs.map((tx) => (
+                  <tr key={tx.id} className="border-t hover:bg-muted/30">
+                    <td className="p-3 font-mono text-xs">{tx.id}</td>
+                    <td className="p-3 text-muted-foreground">{new Date(tx.date).toLocaleDateString()}</td>
+                    <td className="p-3">{tx.plan}</td>
+                    <td className="p-3 font-medium">{tx.amount.toFixed(2)} USDT</td>
+                    <td className="p-3 font-mono text-xs text-amber-600 dark:text-amber-400">
+                      <a href={`${CRYPTO_CONFIG.explorerUrl}/tx/${tx.txHash}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                        {tx.txHash}
+                      </a>
+                    </td>
+                    <td className="p-3 text-xs">{tx.confirmations}</td>
+                    <td className="p-3"><Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 capitalize">{tx.status}</Badge></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+
+          <div className="rounded-lg border border-[#f3ba2f]/30 bg-[#f3ba2f]/5 p-4 text-xs">
+            <div className="font-medium text-[#b8860b] mb-1">About crypto payments</div>
+            <p className="text-muted-foreground">
+              Crypto transactions are processed on the Binance Smart Chain. We require {CRYPTO_CONFIG.minConfirmations} block confirmations before marking a payment as confirmed (typically ~{CRYPTO_CONFIG.estimatedConfirmationMinutes} minutes).
+              Each transaction is verified on-chain and linked to your account automatically. For help with a missing deposit, contact support with your TX hash.
+            </p>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

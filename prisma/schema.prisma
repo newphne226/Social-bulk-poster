@@ -56,6 +56,7 @@ model User {
   invoices          Invoice[]
   payments          Payment[]
   scheduledJobs     ScheduledJob[]
+  cryptoPayments    CryptoPayment[]
   impersonatedBy    String?        // admin user id currently impersonating
 }
 
@@ -193,11 +194,15 @@ model Payment {
   amount          Int             // cents
   currency        String          @default("usd")
   status          PaymentStatus   @default(PENDING)
+  method          PaymentMethod   @default(CARD)
   stripePaymentIntentId String?
   stripeInvoiceId String?
+  cryptoPaymentId String?         // -> CryptoPayment.id when method = CRYPTO
   failureReason   String?
   refundedAt      DateTime?
   createdAt       DateTime        @default(now())
+
+  @@index([userId, method])
 }
 
 enum PaymentStatus {
@@ -206,6 +211,52 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   PARTIALLY_REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  CRYPTO
+  PAYPAL
+  BANK_TRANSFER
+}
+
+// ---------------------------------------------------------------------
+// Crypto Payments (USDT on BEP20)
+// ---------------------------------------------------------------------
+
+model CryptoPayment {
+  id              String              @id @default(cuid())
+  userId          String
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount          Float               // USDT
+  amountUsd       Float
+  asset           String              @default("USDT")
+  network         String              @default("BEP20")
+  chainId         Int                 @default(56)
+  fromAddress     String?
+  txHash          String?             @unique
+  confirmations   Int                 @default(0)
+  status          CryptoPaymentStatus @default(PENDING)
+  plan            String?             // e.g. "VIP Pro"
+  cycle           String?             // "monthly" | "yearly"
+  subscriptionId  String?
+  blockNumber     BigInt?
+  createdAt       DateTime            @default(now())
+  expiresAt       DateTime
+  confirmedAt     DateTime?
+  metadata        String              @default("{}")
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@index([txHash])
+}
+
+enum CryptoPaymentStatus {
+  PENDING
+  CONFIRMING
+  CONFIRMED
+  EXPIRED
+  FAILED
 }
 
 model Invoice {
