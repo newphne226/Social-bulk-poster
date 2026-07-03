@@ -1,0 +1,741 @@
+// =====================================================================
+// SocialPilot SaaS — Prisma Schema
+// Multi-platform social media scheduling platform
+// Supports: Facebook, Instagram, X (Twitter), LinkedIn, Pinterest
+// Architecture designed for adding new platforms without schema changes
+// =====================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------
+// Authentication & Users
+// ---------------------------------------------------------------------
+
+model User {
+  id                String         @id @default(cuid())
+  email             String         @unique
+  emailVerified     DateTime?
+  passwordHash      String?
+  name              String?
+  image             String?
+  twoFactorEnabled  Boolean        @default(false)
+  twoFactorSecret   String?
+  role              UserRole       @default(USER)
+  status            UserStatus     @default(ACTIVE)
+  bannedAt          DateTime?
+  suspendedAt       DateTime?
+  suspendedReason   String?
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  deletedAt         DateTime?
+
+  accounts          SocialAccount[]
+  posts             Post[]
+  media             Media[]
+  sessions          Session[]
+  apiKeys           ApiKey[]
+  notifications     Notification[]
+  subscription      Subscription?
+  teamMemberships   TeamMember[]
+  teamsOwned        Team[]         @relation("TeamOwner")
+  settings          UserSettings?
+  auditLogs         AuditLog[]
+  tickets           Ticket[]
+  ticketReplies     TicketReply[]
+  devices           Device[]
+  oauthAccounts     OAuthAccount[]
+  invoices          Invoice[]
+  payments          Payment[]
+  scheduledJobs     ScheduledJob[]
+  impersonatedBy    String?        // admin user id currently impersonating
+}
+
+model OAuthAccount {
+  id                String         @id @default(cuid())
+  userId            String
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String         // google, github, apple...
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  createdAt         DateTime       @default(now())
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionToken String   @unique
+  expires      DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+}
+
+model Device {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceName   String
+  deviceType   String   // desktop, mobile, extension
+  os           String?
+  browser      String?
+  ipAddress    String?
+  location     String?
+  lastActiveAt DateTime @default(now())
+  isTrusted    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  OWNER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DELETED
+  PENDING
+}
+
+// ---------------------------------------------------------------------
+// Subscriptions, Plans, Billing (Stripe)
+// ---------------------------------------------------------------------
+
+model Plan {
+  id              String              @id @default(cuid())
+  name            String              @unique // Free, Silver, VIP Pro
+  tier            PlanTier            @default(FREE)
+  priceMonthly    Int                 @default(0) // cents
+  priceYearly     Int                 @default(0) // cents
+  stripePriceIdMonthly String?
+  stripePriceIdYearly  String?
+  description     String?
+  features        String              @default("[]") // JSON array of feature flags
+  limits          String              @default("{}") // JSON: maxPlatforms, maxAccountsPerPlatform, maxScheduledPosts, etc.
+  isActive        Boolean             @default(true)
+  isPublic        Boolean             @default(true)
+  sortOrder       Int                 @default(0)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  subscriptions   Subscription[]
+  coupons         Coupon[]
+}
+
+enum PlanTier {
+  FREE
+  SILVER
+  VIP_PRO
+  ENTERPRISE
+}
+
+model Subscription {
+  id                    String              @id @default(cuid())
+  userId                String              @unique
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId                String
+  plan                  Plan                @relation(fields: [planId], references: [id])
+  status                SubscriptionStatus  @default(TRIALING)
+  billingCycle          BillingCycle        @default(MONTHLY)
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?             @unique
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean             @default(false)
+  canceledAt            DateTime?
+  trialEndsAt           DateTime?
+  quantity              Int                 @default(1)
+  metadata              String              @default("{}")
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  payments              Payment[]
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INCOMPLETE
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+model Payment {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  subscriptionId  String?
+  subscription    Subscription?   @relation(fields: [subscriptionId], references: [id])
+  amount          Int             // cents
+  currency        String          @default("usd")
+  status          PaymentStatus   @default(PENDING)
+  stripePaymentIntentId String?
+  stripeInvoiceId String?
+  failureReason   String?
+  refundedAt      DateTime?
+  createdAt       DateTime        @default(now())
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model Invoice {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  subscriptionId  String?
+  number          String    @unique
+  amount          Int
+  currency        String    @default("usd")
+  status          String    @default("open") // open, paid, void, uncollectible
+  stripeInvoiceId String?   @unique
+  pdfUrl          String?
+  hostedUrl       String?
+  dueDate         DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+model Coupon {
+  id              String         @id @default(cuid())
+  code            String         @unique
+  planId          String?
+  plan            Plan?          @relation(fields: [planId], references: [id])
+  percentOff      Int?
+  amountOff       Int?
+  currency        String?
+  duration        CouponDuration @default(ONCE)
+  durationInMonths Int?
+  maxRedemptions  Int?
+  timesRedeemed   Int            @default(0)
+  validFrom       DateTime?
+  validUntil      DateTime?
+  isActive        Boolean        @default(true)
+  stripeCouponId  String?
+  createdAt       DateTime       @default(now())
+}
+
+enum CouponDuration {
+  ONCE
+  REPEATING
+  FOREVER
+}
+
+// ---------------------------------------------------------------------
+// Social Accounts (modular — supports any platform)
+// ---------------------------------------------------------------------
+
+model SocialAccount {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform        String         // facebook, instagram, x, linkedin, pinterest, ... (extensible)
+  platformAccountId String       // platform-specific account id
+  displayName     String
+  username        String?
+  avatarUrl       String?
+  profileUrl      String?
+  accessToken     String         // encrypted at rest
+  refreshToken    String?
+  tokenExpiresAt  DateTime?
+  isConnected     Boolean        @default(true)
+  isEnabled       Boolean        @default(true)
+  groupId         String?        // for grouping accounts
+  group           AccountGroup?  @relation(fields: [groupId], references: [id])
+  lastSyncAt      DateTime?
+  followerCount   Int?
+  metadata        String         @default("{}")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  posts           Post[]
+  analytics       AccountAnalytics[]
+
+  @@unique([userId, platform, platformAccountId])
+  @@index([userId, platform])
+}
+
+model AccountGroup {
+  id          String         @id @default(cuid())
+  userId      String
+  name        String
+  color       String?
+  sortOrder   Int            @default(0)
+  accounts    SocialAccount[]
+  createdAt   DateTime       @default(now())
+
+  @@unique([userId, name])
+}
+
+model AccountAnalytics {
+  id           String        @id @default(cuid())
+  accountId    String
+  account      SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date         DateTime
+  followers    Int?
+  following    Int?
+  posts        Int?
+  engagement   Float?
+  impressions  Int?
+  reach        Int?
+  createdAt    DateTime      @default(now())
+
+  @@unique([accountId, date])
+}
+
+// ---------------------------------------------------------------------
+// Posts & Scheduling
+// ---------------------------------------------------------------------
+
+model Post {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caption         String
+  mediaUrls       String         @default("[]") // JSON array
+  hashtags        String         @default("[]") // JSON array
+  mentions        String         @default("[]")
+  platform        String         // denormalized for quick filtering
+  accountId       String
+  account         SocialAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  status          PostStatus     @default(DRAFT)
+  type            PostType       @default(TEXT)
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  failedAt        DateTime?
+  failureReason   String?
+  platformPostId  String?        // returned by platform after publishing
+  permalink       String?
+  isRecurring     Boolean        @default(false)
+  recurringRule   String?        // iCal-style RRULE
+  recurringParentId String?
+  retryCount      Int            @default(0)
+  maxRetries      Int            @default(3)
+  queueOrder      Int?
+  tags            String         @default("[]")
+  metadata        String         @default("{}")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  schedule        Schedule?
+  jobs            ScheduledJob[]
+
+  @@index([userId, status])
+  @@index([userId, scheduledAt])
+  @@index([accountId])
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  QUEUED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  CANCELED
+  PAUSED
+}
+
+enum PostType {
+  TEXT
+  IMAGE
+  VIDEO
+  CAROUSEL
+  STORY
+  REEL
+  LINK
+}
+
+model Schedule {
+  id              String         @id @default(cuid())
+  postId          String         @unique
+  post            Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  scheduledAt     DateTime
+  timezone        String         @default("UTC")
+  randomDelayMin  Int            @default(0)   // seconds
+  randomDelayMax  Int            @default(0)   // seconds
+  appliedDelay    Int            @default(0)   // actual applied delay
+  queuePosition   Int?
+  priority        Int            @default(0)
+  isPaused        Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+}
+
+model ScheduledJob {
+  id              String     @id @default(cuid())
+  postId          String
+  post            Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  jobType         JobType    @default(PUBLISH)
+  status          JobStatus  @default(PENDING)
+  scheduledFor    DateTime
+  startedAt       DateTime?
+  completedAt     DateTime?
+  failedAt        DateTime?
+  errorMessage    String?
+  attempts        Int        @default(0)
+  maxAttempts     Int        @default(3)
+  payload         String     @default("{}")
+  workerId        String?
+  createdAt       DateTime   @default(now())
+
+  @@index([status, scheduledFor])
+  @@index([userId])
+}
+
+enum JobType {
+  PUBLISH
+  RETRY
+  SYNC_ANALYTICS
+  SYNC_ACCOUNT
+  CLEANUP
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  DELAYED
+}
+
+// ---------------------------------------------------------------------
+// Media Library
+// ---------------------------------------------------------------------
+
+model Media {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folderId     String?
+  folder       Folder?    @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  name         String
+  type         MediaType
+  mimeType     String
+  size         Int        // bytes
+  url          String     // cloud storage URL
+  thumbnailUrl String?
+  width        Int?
+  height       Int?
+  duration     Int?       // seconds for video
+  tags         String     @default("[]") // JSON array
+  altText      String?
+  isPublic     Boolean    @default(false)
+  metadata     String     @default("{}")
+  createdAt    DateTime   @default(now())
+
+  @@index([userId, type])
+  @@index([userId, folderId])
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  parentId  String?
+  parent    Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Folder[] @relation("FolderTree")
+  media     Media[]
+  color     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, name, parentId])
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  GIF
+  AUDIO
+  DOCUMENT
+}
+
+// ---------------------------------------------------------------------
+// Teams & Collaboration
+// ---------------------------------------------------------------------
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  ownerId     String
+  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
+  slug        String       @unique
+  description String?
+  avatarUrl   String?
+  members     TeamMember[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model TeamMember {
+  id        String     @id @default(cuid())
+  teamId    String
+  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      TeamRole   @default(VIEWER)
+  invitedAt DateTime?
+  joinedAt  DateTime   @default(now())
+
+  @@unique([teamId, userId])
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  EDITOR
+  CONTRIBUTOR
+  VIEWER
+}
+
+// ---------------------------------------------------------------------
+// User Settings & Safe Posting
+// ---------------------------------------------------------------------
+
+model UserSettings {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Safe Posting
+  randomDelayMin      Int      @default(0)    // seconds
+  randomDelayMax      Int      @default(60)
+  postingIntervalMin  Int      @default(15)   // minutes between posts
+  workingHoursStart   String   @default("09:00")
+  workingHoursEnd     String   @default("21:00")
+  workingDays         String   @default("[1,2,3,4,5]") // ISO weekdays
+  timezone            String   @default("UTC")
+  postingOrder        String   @default("sequential") // sequential | random
+  accountRotation     String   @default("round_robin") // round_robin | least_used | random
+  dailyPostingLimit   Int      @default(50)
+  weeklyPostingLimit  Int      @default(300)
+  schedulePaused      Boolean  @default(false)
+  autoRetryFailed     Boolean  @default(true)
+  maxRetries          Int      @default(3)
+
+  // UI
+  theme               String   @default("system") // light | dark | system
+  language            String   @default("en")
+  emailNotifications  Boolean  @default(true)
+  pushNotifications   Boolean  @default(true)
+
+  // Privacy
+  twoFactorRequired   Boolean  @default(false)
+  shareAnalytics      Boolean  @default(true)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------
+
+model Notification {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  data      String            @default("{}")
+  isRead    Boolean           @default(false)
+  readAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  @@index([userId, isRead])
+}
+
+enum NotificationType {
+  POST_PUBLISHED
+  POST_FAILED
+  POST_SCHEDULED
+  ACCOUNT_DISCONNECTED
+  ACCOUNT_EXPIRED
+  SUBSCRIPTION_RENEWED
+  SUBSCRIPTION_CANCELED
+  PAYMENT_FAILED
+  PAYMENT_SUCCEEDED
+  TEAM_INVITE
+  SYSTEM
+  ANNOUNCEMENT
+}
+
+// ---------------------------------------------------------------------
+// API Keys
+// ---------------------------------------------------------------------
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  keyPrefix   String    // first 8 chars shown to user
+  keyHash     String    @unique // hashed full key
+  permissions String    @default("[]") // JSON array
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------
+// Admin: Tickets, Announcements, Feature Flags, Audit Logs
+// ---------------------------------------------------------------------
+
+model Ticket {
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  subject     String
+  body        String
+  category    String         @default("general")
+  priority    TicketPriority @default(NORMAL)
+  status      TicketStatus   @default(OPEN)
+  assignedTo  String?
+  replies     TicketReply[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  closedAt    DateTime?
+}
+
+model TicketReply {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  body      String
+  isStaff   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  PENDING
+  RESOLVED
+  CLOSED
+}
+
+model Announcement {
+  id         String            @id @default(cuid())
+  title      String
+  body       String
+  type       AnnouncementType  @default(INFO)
+  audience   String            @default("all") // all | free | silver | vip
+  isPinned   Boolean           @default(false)
+  isActive   Boolean           @default(true)
+  startsAt   DateTime?
+  endsAt     DateTime?
+  createdAt  DateTime          @default(now())
+}
+
+enum AnnouncementType {
+  INFO
+  WARNING
+  UPDATE
+  MAINTENANCE
+  PROMOTION
+}
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  description String?
+  enabled     Boolean  @default(false)
+  rollout     Int      @default(0) // 0-100 percentage
+  plans       String   @default("[]") // JSON list of plan tiers, empty = all
+  metadata    String   @default("{}")
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String   // e.g. "user.login", "post.schedule"
+  resource   String?
+  resourceId String?
+  ipAddress  String?
+  userAgent  String?
+  metadata   String   @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+}
+
+model PlatformSetting {
+  id           String   @id @default(cuid())
+  platform     String   @unique
+  isEnabled    Boolean  @default(true)
+  isPublic     Boolean  @default(true)
+  config       String   @default("{}") // JSON
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AISetting {
+  id            String   @id @default(cuid())
+  provider      String   @default("zai")
+  model         String   @default("glm-4.6")
+  temperature   Float    @default(0.7)
+  maxTokens     Int      @default(1000)
+  isEnabled     Boolean  @default(true)
+  dailyLimit    Int      @default(1000)
+  config        String   @default("{}")
+  updatedAt     DateTime @updatedAt
+}
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  level     String   // info | warn | error | debug
+  source    String   // api | worker | extension | web
+  message   String
+  metadata  String   @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([level, createdAt])
+}

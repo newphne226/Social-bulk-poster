@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>SocialPilot Options</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 600px;
+        margin: 40px auto;
+        padding: 20px;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+      h1 { font-size: 24px; margin-bottom: 8px; }
+      h2 { font-size: 16px; margin-top: 32px; margin-bottom: 8px; }
+      .row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
+      .row label { font-size: 13px; font-weight: 500; }
+      .row input, .row select { padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; }
+      .toggle { position: relative; width: 40px; height: 22px; background: #e2e8f0; border-radius: 11px; cursor: pointer; transition: background 0.15s; }
+      .toggle.on { background: #f59e0b; }
+      .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: white; transition: transform 0.15s; }
+      .toggle.on::after { transform: translateX(18px); }
+      button { padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+      .hint { color: #64748b; font-size: 12px; margin-top: 4px; }
+    </style>
+  </head>
+  <body>
+    <h1>SocialPilot Options</h1>
+    <p class="hint">Configure how the extension behaves. Changes are saved automatically.</p>
+
+    <h2>Sync</h2>
+    <div class="row">
+      <div>
+        <label>Auto-sync</label>
+        <div class="hint">Pull new posts and notifications every 5 minutes</div>
+      </div>
+      <div class="toggle on" id="auto-sync"></div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Sync interval (minutes)</label>
+      </div>
+      <input type="number" id="sync-interval" value="5" min="1" max="60" />
+    </div>
+
+    <h2>Notifications</h2>
+    <div class="row">
+      <div>
+        <label>Desktop notifications</label>
+        <div class="hint">Show Chrome notifications for new alerts</div>
+      </div>
+      <div class="toggle on" id="desktop-notif"></div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Sound on failed posts</label>
+      </div>
+      <div class="toggle" id="sound-fail"></div>
+    </div>
+
+    <h2>Quick Schedule</h2>
+    <div class="row">
+      <div>
+        <label>Default platform</label>
+      </div>
+      <select id="default-platform">
+        <option value="">Ask each time</option>
+        <option value="facebook">Facebook</option>
+        <option value="instagram">Instagram</option>
+        <option value="x">X (Twitter)</option>
+        <option value="linkedin">LinkedIn</option>
+        <option value="pinterest">Pinterest</option>
+      </select>
+    </div>
+    <div class="row">
+      <div>
+        <label>Show floating button on images</label>
+        <div class="hint">Hover any large image to see a "Schedule" overlay</div>
+      </div>
+      <div class="toggle on" id="img-overlay"></div>
+    </div>
+
+    <h2>Appearance</h2>
+    <div class="row">
+      <div>
+        <label>Dark mode (popup)</label>
+      </div>
+      <div class="toggle" id="dark-mode"></div>
+    </div>
+
+    <h2>Account</h2>
+    <div class="row">
+      <div>
+        <label>Logged in as</label>
+        <div class="hint" id="user-email">—</div>
+      </div>
+      <button id="logout">Log out</button>
+    </div>
+
+    <script src="options.js"></script>
+  </body>
+</html>
