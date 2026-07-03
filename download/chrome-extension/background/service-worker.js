@@ -28,22 +28,22 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     await chrome.contextMenus.removeAll();
     chrome.contextMenus.create({
       id: "socialpilot-schedule-page",
-      title: "Schedule this page with SocialPilot",
+      title: chrome.i18n.getMessage("ctxSchedulePage") || "Schedule this page with SocialPilot",
       contexts: ["page"],
     });
     chrome.contextMenus.create({
       id: "socialpilot-schedule-selection",
-      title: "Schedule selection with SocialPilot",
+      title: chrome.i18n.getMessage("ctxScheduleSelection") || "Schedule selection with SocialPilot",
       contexts: ["selection"],
     });
     chrome.contextMenus.create({
       id: "socialpilot-schedule-image",
-      title: "Schedule this image with SocialPilot",
+      title: chrome.i18n.getMessage("ctxScheduleImage") || "Schedule this image with SocialPilot",
       contexts: ["image"],
     });
     chrome.contextMenus.create({
       id: "socialpilot-schedule-link",
-      title: "Schedule this link with SocialPilot",
+      title: chrome.i18n.getMessage("ctxScheduleLink") || "Schedule this link with SocialPilot",
       contexts: ["link"],
     });
   } catch (e) {

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "SocialPilot — Social Media Scheduler",
+  "name": "__MSG_extName__",
   "version": "1.0.0",
-  "description": "Schedule and publish social media posts across Facebook, Instagram, X, LinkedIn, and Pinterest from any webpage.",
+  "description": "__MSG_extDescription__",
   "default_locale": "en",
   "permissions": [
     "storage",
@@ -18,7 +18,7 @@
   ],
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "SocialPilot",
+    "default_title": "__MSG_actionTitle__",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",
@@ -57,14 +57,14 @@
         "default": "Ctrl+Shift+S",
         "mac": "Command+Shift+S"
       },
-      "description": "Open SocialPilot popup"
+      "description": "__MSG_commandOpenPopup__"
     },
     "quick-schedule-from-page": {
       "suggested_key": {
         "default": "Ctrl+Shift+P",
         "mac": "Command+Shift+P"
       },
-      "description": "Quick-schedule current page as a post"
+      "description": "__MSG_commandQuickSchedule__"
     }
   },
   "content_security_policy": {
