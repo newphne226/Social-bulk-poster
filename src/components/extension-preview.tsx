@@ -15,7 +15,7 @@ import {
   CalendarClock, Bell, ExternalLink, Settings, LogOut, Mail, Lock, Eye, EyeOff,
   ArrowRight, ChevronRight, Clock, CheckCircle2, AlertTriangle, Hash, Upload,
   Trash2, Edit3, Moon, Sun, Users, TrendingUp, ImagePlus, MousePointerClick,
-  Send, Save, Globe, Calendar, Power, RefreshCw,
+  Send, Save, Globe, Calendar, Power, RefreshCw, UserPlus, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -383,94 +383,213 @@ function ExtensionHeader({ loggedIn }: { loggedIn: boolean }) {
 // =====================================================================
 
 function LoginSection({ onLogin }: { onLogin: () => void }) {
+  const [authTab, setAuthTab] = React.useState<"signin" | "signup">("signin");
   const [email, setEmail] = React.useState("alex@socialpilot.io");
   const [password, setPassword] = React.useState("••••••••••");
   const [showPw, setShowPw] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [remember, setRemember] = React.useState(true);
+  const [error, setError] = React.useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
+    // Basic email validation
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) {
+      setError("Please enter a valid email address");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => { setLoading(false); onLogin(); }, 550);
+    setTimeout(() => {
+      setLoading(false);
+      onLogin();
+      toast.success("Welcome back!");
+    }, 550);
   };
 
   return (
     <ScrollArea className="h-full">
-      <div className="flex flex-col gap-4 p-5">
+      <div className="flex flex-col gap-3 p-5">
+        {/* Brand header */}
         <div className="text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-pink-500 text-white shadow-md">
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-pink-500 text-white shadow-md">
             <Sparkles className="h-6 w-6" />
           </div>
-          <h2 className="text-base font-semibold">Welcome back</h2>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            Sign in to manage your social schedule
+          <h2 className="text-base font-semibold">SocialPilot</h2>
+          <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+            Schedule across 5 platforms in seconds
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="ext-email" className="text-xs">Email</Label>
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
-              <Input
-                id="ext-email" type="email" value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-9 pl-8 text-xs"
-                placeholder="you@company.com" required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="ext-pw" className="text-xs">Password</Label>
-            <div className="relative">
-              <Lock className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
-              <Input
-                id="ext-pw" type={showPw ? "text" : "password"} value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-9 pl-8 pr-8 text-xs" placeholder="••••••••" required
-              />
-              <button
-                type="button" onClick={() => setShowPw((v) => !v)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-              >
-                {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              </button>
-            </div>
-          </div>
-
-          <Button
-            type="submit" disabled={loading}
-            className="h-9 w-full bg-gradient-to-r from-amber-500 to-pink-500 text-white hover:from-amber-600 hover:to-pink-600"
+        {/* Sign In / Sign Up tab switcher */}
+        <div className="flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-900">
+          <button
+            type="button"
+            onClick={() => { setAuthTab("signin"); setError(""); }}
+            className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors ${
+              authTab === "signin"
+                ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white"
+                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+            }`}
           >
-            {loading ? "Signing in…" : "Login"}
-            {!loading && <ArrowRight className="h-3.5 w-3.5" />}
-          </Button>
-        </form>
-
-        <div className="flex items-center gap-2">
-          <Separator className="flex-1" />
-          <span className="text-[10px] uppercase tracking-wider text-zinc-400">or</span>
-          <Separator className="flex-1" />
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => { setAuthTab("signup"); setError(""); }}
+            className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors ${
+              authTab === "signup"
+                ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white"
+                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+            }`}
+          >
+            Sign Up
+          </button>
         </div>
 
-        <Button
-          type="button" variant="outline"
-          className="h-9 w-full bg-transparent text-xs"
-          onClick={() => toast.info("Google OAuth would launch here")}
-        >
-          <GoogleG />
-          Login with Google
-        </Button>
+        {authTab === "signin" ? (
+          <>
+            <form onSubmit={handleSubmit} className="space-y-2.5">
+              <div className="space-y-1">
+                <Label htmlFor="ext-email" className="text-[11px]">Email</Label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                  <Input
+                    id="ext-email" type="email" value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-9 pl-8 text-xs"
+                    placeholder="you@company.com" required
+                  />
+                </div>
+              </div>
 
-        <p className="text-center text-[11px] text-zinc-500 dark:text-zinc-400">
-          Don&apos;t have an account?{" "}
-          <a
-            href="https://socialpilot.io" target="_blank" rel="noreferrer"
-            className="font-medium text-amber-600 hover:underline dark:text-amber-400"
-          >
-            Register on socialpilot.io
-          </a>
+              <div className="space-y-1">
+                <Label htmlFor="ext-pw" className="text-[11px]">Password</Label>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                  <Input
+                    id="ext-pw" type={showPw ? "text" : "password"} value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-9 pl-8 pr-8 text-xs" placeholder="••••••••" required
+                  />
+                  <button
+                    type="button" onClick={() => setShowPw((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                    aria-label={showPw ? "Hide password" : "Show password"}
+                  >
+                    {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px]">
+                <label className="flex items-center gap-1.5 cursor-pointer text-zinc-500 dark:text-zinc-400">
+                  <input
+                    type="checkbox" checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="h-3 w-3 cursor-pointer"
+                  />
+                  Remember me
+                </label>
+                <a
+                  href="https://socialpilot.io/forgot-password"
+                  target="_blank" rel="noreferrer"
+                  className="text-zinc-500 hover:text-amber-600 hover:underline dark:text-zinc-400 dark:hover:text-amber-400"
+                >
+                  Forgot password?
+                </a>
+              </div>
+
+              {error && (
+                <div className="rounded-md bg-red-500/10 px-2.5 py-1.5 text-[10px] text-red-600 dark:text-red-400">
+                  {error}
+                </div>
+              )}
+
+              <Button
+                type="submit" disabled={loading}
+                className="h-9 w-full bg-gradient-to-r from-amber-500 to-pink-500 text-white hover:from-amber-600 hover:to-pink-600"
+              >
+                {loading ? "Signing in…" : "Sign In"}
+                {!loading && <ArrowRight className="h-3.5 w-3.5" />}
+              </Button>
+            </form>
+
+            <div className="flex items-center gap-2">
+              <Separator className="flex-1" />
+              <span className="text-[10px] uppercase tracking-wider text-zinc-400">or</span>
+              <Separator className="flex-1" />
+            </div>
+
+            <Button
+              type="button" variant="outline"
+              className="h-9 w-full bg-transparent text-xs"
+              onClick={() => toast.info("Google OAuth would launch here")}
+            >
+              <GoogleG />
+              Continue with Google
+            </Button>
+
+            <p className="text-center text-[11px] text-zinc-500 dark:text-zinc-400">
+              Don&apos;t have an account?{" "}
+              <button
+                type="button"
+                onClick={() => setAuthTab("signup")}
+                className="font-medium text-amber-600 hover:underline dark:text-amber-400"
+              >
+                Sign Up
+              </button>
+            </p>
+          </>
+        ) : (
+          /* Sign Up panel — explains that registration is on website only */
+          <div className="space-y-3 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-pink-500 text-white">
+              <UserPlus className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">Create your account</h3>
+              <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                For security reasons, account registration is only available on our website.
+                Click below to sign up — it takes less than a minute.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={() => toast.success("Opening socialpilot.io/register in a new tab")}
+              className="h-9 w-full bg-gradient-to-r from-amber-500 to-pink-500 text-white hover:from-amber-600 hover:to-pink-600"
+            >
+              Create Account
+              <ExternalLink className="h-3 w-3 ml-1.5" />
+            </Button>
+            <ul className="space-y-1 text-left text-[11px] text-zinc-500 dark:text-zinc-400">
+              <li className="flex items-start gap-1.5"><Check className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" /> Free plan forever — no credit card required</li>
+              <li className="flex items-start gap-1.5"><Check className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" /> Schedule across 5 social platforms</li>
+              <li className="flex items-start gap-1.5"><Check className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" /> AI captions, hashtags & emoji</li>
+              <li className="flex items-start gap-1.5"><Check className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" /> Cancel anytime</li>
+            </ul>
+            <p className="text-center text-[11px] text-zinc-500 dark:text-zinc-400">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => setAuthTab("signin")}
+                className="font-medium text-amber-600 hover:underline dark:text-amber-400"
+              >
+                Sign In
+              </button>
+            </p>
+          </div>
+        )}
+
+        <p className="text-center text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">
+          🔒 The extension only supports Sign In. Registration happens on the website.
         </p>
       </div>
     </ScrollArea>

@@ -137,6 +137,156 @@ body.dark .divider span { background: var(--bg); }
 
 .security-note { text-align: center; margin-top: 20px; font-size: 10px; color: var(--text-muted); }
 
+/* ----- Auth tabs (Sign In / Sign Up) ----- */
+.auth-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  margin: 16px 0 14px;
+  background: var(--bg-muted);
+  border-radius: 10px;
+}
+.auth-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 7px;
+  transition: all 0.15s;
+}
+.auth-tab.active {
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+body.dark .auth-tab.active { background: #334155; }
+
+.auth-panel.hidden { display: none; }
+
+/* ----- Password visibility toggle ----- */
+.password-wrap { position: relative; }
+.password-wrap input { padding-right: 36px; }
+.toggle-pw {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.toggle-pw:hover { color: var(--text); background: var(--bg-muted); }
+
+/* ----- Form row: remember me + forgot ----- */
+.form-row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0 4px;
+  font-size: 11px;
+}
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.checkbox-row input { width: 13px; height: 13px; cursor: pointer; }
+.link-muted {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 11px;
+}
+.link-muted:hover { color: var(--primary); text-decoration: underline; }
+
+/* ----- Switch-text (Don't have account? Sign Up) ----- */
+.switch-text {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.link-accent {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 4px;
+}
+.link-accent:hover { text-decoration: underline; }
+
+/* ----- Validation error text ----- */
+.error-text {
+  color: var(--danger);
+  font-size: 10px;
+  margin-top: 3px;
+  min-height: 12px;
+  transition: opacity 0.15s;
+}
+.error-text:empty { opacity: 0; }
+
+/* ----- Sign Up panel ----- */
+.signup-card {
+  text-align: center;
+  padding: 8px 4px;
+}
+.signup-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f59e0b, #ec4899);
+  color: white;
+  margin-bottom: 12px;
+}
+.signup-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.signup-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.signup-benefits {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  text-align: left;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.signup-benefits li {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.signup-benefits li:last-child { border-bottom: none; }
+.signup-card .btn-primary {
+  width: 100%;
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* ----- Main screen ----- */
 .app-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -338,4 +488,7 @@ body.dark .loading { background: rgba(15, 23, 42, 0.7); }
   z-index: 200;
   animation: slideUp 0.2s ease-out;
 }
+.toast-error { background: var(--danger); color: white; }
+.toast-success { background: var(--success); color: white; }
+.toast-info { background: var(--text); color: var(--bg); }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }

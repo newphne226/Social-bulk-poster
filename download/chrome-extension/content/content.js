@@ -1,15 +1,28 @@
 // =====================================================================
-// SocialPilot Chrome Extension — Content Script
+// SocialPilot Chrome Extension — Content Script (v2 — bug-fixed)
 // =====================================================================
-// Runs on every page. Responsibilities:
-//   1. Listen for the "schedule this page" trigger (from context menu or keyboard)
-//   2. Extract page metadata (title, description, image, selected text)
-//   3. Show an inline floating "Quick schedule" button on hover over images
-//   4. Relay extracted data to the background script
+// v2 changes from v1:
+//   • Removed Ctrl+Shift+S handler — it conflicted with the manifest's
+//     "open-popup" command and never fired (Chrome captures it first).
+//     The manifest command is the only keyboard shortcut now.
+//   • onMessage now always returns true for async handlers and always
+//     calls sendResponse (even for unknown message types) so the popup
+//     never hangs waiting for a response.
+//   • Guard against running on restricted pages (chrome://, etc.)
+//   • Guard against SPA route changes re-injecting the script
 // =====================================================================
 
 (function () {
-  // ----- Page metadata extractor (used by background.executeScript too) -----
+  // Skip on restricted pages — content scripts can't run here anyway, but
+  // some old Chrome versions still inject them.
+  if (/^(chrome|edge|about|chrome-extension|devtools|view-source):/i.test(location.href)) {
+    return;
+  }
+  // Guard against double-injection
+  if (window.__SOCIALPILOT_CONTENT_LOADED__) return;
+  window.__SOCIALPILOT_CONTENT_LOADED__ = true;
+
+  // ----- Page metadata extractor -----
   function getPageMeta() {
     const og = (sel) => document.querySelector(sel)?.content || "";
     return {
@@ -24,14 +37,30 @@
   }
 
   // ----- Receive messages from background / popup -----
+  // CRITICAL: in MV3, onMessage listener must return `true` to keep the
+  // message channel open for async sendResponse, OR call sendResponse
+  // synchronously and return undefined.
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg.type === "EXTRACT_PAGE_META") {
-      sendResponse(getPageMeta());
-      return;
-    }
-    if (msg.type === "SHOW_QUICK_BUTTON") {
-      showFloatingButton(msg.payload);
-      sendResponse({ ok: true });
+    try {
+      if (msg?.type === "EXTRACT_PAGE_META") {
+        sendResponse({ ok: true, meta: getPageMeta() });
+        return false; // synchronous response — channel closes immediately
+      }
+      if (msg?.type === "SHOW_QUICK_BUTTON") {
+        showFloatingButton(msg.payload);
+        sendResponse({ ok: true });
+        return false;
+      }
+      if (msg?.type === "PING") {
+        sendResponse({ ok: true, url: location.href });
+        return false;
+      }
+      // Unknown message — respond so caller doesn't hang
+      sendResponse({ ok: false, error: `Unknown message type: ${msg?.type}` });
+      return false;
+    } catch (e) {
+      sendResponse({ ok: false, error: String(e) });
+      return false;
     }
   });
 
@@ -68,12 +97,19 @@
 
     floatingBtn.addEventListener("mouseenter", () => (floatingBtn.style.transform = "translateY(-2px)"));
     floatingBtn.addEventListener("mouseleave", () => (floatingBtn.style.transform = "translateY(0)"));
-    floatingBtn.addEventListener("click", () => {
+    floatingBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const meta = getPageMeta();
-      chrome.runtime.sendMessage({
-        type: "QUICK_SCHEDULE_PAGE",
-        payload: { ...meta, ...payload },
-      });
+      // Send to background — message handler will save & open popup
+      try {
+        chrome.runtime.sendMessage({
+          type: "QUICK_SCHEDULE_PAGE",
+          payload: { ...meta, ...(payload || {}) },
+        });
+      } catch (err) {
+        console.warn("[SocialPilot] sendMessage failed", err);
+      }
       floatingBtn.remove();
       floatingBtn = null;
     });
@@ -97,7 +133,8 @@
     (e) => {
       const img = e.target;
       if (!(img instanceof HTMLImageElement) || img.width < 200 || img.height < 200) return;
-      if (img.closest("#socialpilot-*")) return;
+      // Don't show on our own UI
+      if (img.closest("[id^='socialpilot-']")) return;
 
       if (currentOverlay) currentOverlay.remove();
       const rect = img.getBoundingClientRect();
@@ -116,10 +153,15 @@
       `;
       currentOverlay.addEventListener("click", (ev) => {
         ev.stopPropagation();
-        chrome.runtime.sendMessage({
-          type: "QUICK_SCHEDULE_PAGE",
-          payload: { ...getPageMeta(), image: img.src, source: "image-hover" },
-        });
+        ev.preventDefault();
+        try {
+          chrome.runtime.sendMessage({
+            type: "QUICK_SCHEDULE_PAGE",
+            payload: { ...getPageMeta(), image: img.src, source: "image-hover" },
+          });
+        } catch (err) {
+          console.warn("[SocialPilot] sendMessage failed", err);
+        }
         currentOverlay.remove();
         currentOverlay = null;
       });
@@ -143,13 +185,10 @@
     { passive: true }
   );
 
-  // Listen for keyboard shortcut Ctrl+Shift+S to show floating button
-  document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === "S") {
-      e.preventDefault();
-      showFloatingButton({ source: "keyboard" });
-    }
-  });
+  // NOTE: We do NOT listen for Ctrl+Shift+S here. That shortcut is
+  // claimed by the manifest's "open-popup" command, which Chrome handles
+  // at the browser level — content scripts never see it. Adding a handler
+  // here was dead code in v1.
 
   console.log("[SocialPilot] content script loaded on", location.href);
 })();

@@ -1,11 +1,18 @@
 // =====================================================================
-// SocialPilot Chrome Extension — Options page logic
+// SocialPilot Chrome Extension — Options page logic (v2)
+// =====================================================================
+// v2 changes:
+//   • Guard against missing elements
+//   • Sync interval validation (min 1, max 60)
+//   • Logout button shows confirmation feedback
+//   • Save settings also updates the SW alarms immediately
 // =====================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
   const { user, settings = {} } = await chrome.storage.local.get(["user", "settings"]);
 
-  document.getElementById("user-email").textContent = user?.email || "Not logged in";
+  const emailEl = document.getElementById("user-email");
+  if (emailEl) emailEl.textContent = user?.email || "Not logged in";
 
   // Load saved toggles
   setToggle("auto-sync", settings.autoSync !== false);
@@ -14,41 +21,89 @@ document.addEventListener("DOMContentLoaded", async () => {
   setToggle("img-overlay", settings.imgOverlay !== false);
   setToggle("dark-mode", settings.darkMode === true);
 
-  if (settings.syncInterval) document.getElementById("sync-interval").value = settings.syncInterval;
-  if (settings.defaultPlatform) document.getElementById("default-platform").value = settings.defaultPlatform;
+  const syncIntervalEl = document.getElementById("sync-interval");
+  if (syncIntervalEl && settings.syncInterval) syncIntervalEl.value = settings.syncInterval;
+  const platformEl = document.getElementById("default-platform");
+  if (platformEl && settings.defaultPlatform) platformEl.value = settings.defaultPlatform;
 
   // Bind toggle clicks
   ["auto-sync", "desktop-notif", "sound-fail", "img-overlay", "dark-mode"].forEach((id) => {
-    document.getElementById(id).addEventListener("click", () => {
-      const t = document.getElementById(id);
-      t.classList.toggle("on");
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("click", () => {
+      el.classList.toggle("on");
+      el.setAttribute("aria-checked", el.classList.contains("on"));
       saveSettings();
     });
   });
 
-  document.getElementById("sync-interval").addEventListener("change", saveSettings);
-  document.getElementById("default-platform").addEventListener("change", saveSettings);
+  if (syncIntervalEl) {
+    syncIntervalEl.addEventListener("change", () => {
+      const v = parseInt(syncIntervalEl.value, 10);
+      if (isNaN(v) || v < 1) syncIntervalEl.value = 1;
+      if (v > 60) syncIntervalEl.value = 60;
+      saveSettings();
+    });
+  }
+  if (platformEl) platformEl.addEventListener("change", saveSettings);
 
-  document.getElementById("logout").addEventListener("click", async () => {
-    if (!confirm("Log out of SocialPilot?")) return;
-    await chrome.runtime.sendMessage({ type: "AUTH_LOGOUT" });
-    document.getElementById("user-email").textContent = "Not logged in";
-  });
+  const logoutBtn = document.getElementById("logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      if (!confirm("Log out of SocialPilot?")) return;
+      logoutBtn.disabled = true;
+      logoutBtn.textContent = "Logging out...";
+      try {
+        await chrome.runtime.sendMessage({ type: "AUTH_LOGOUT" });
+        if (emailEl) emailEl.textContent = "Not logged in";
+        showStatus("Logged out successfully");
+      } catch (e) {
+        showStatus("Logout failed: " + e.message, true);
+      } finally {
+        logoutBtn.disabled = false;
+        logoutBtn.textContent = "Log out";
+      }
+    });
+  }
 });
 
 function setToggle(id, on) {
-  document.getElementById(id).classList.toggle("on", on);
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle("on", on);
+  el.setAttribute("aria-checked", on);
 }
 
 async function saveSettings() {
   const settings = {
-    autoSync: document.getElementById("auto-sync").classList.contains("on"),
-    desktopNotif: document.getElementById("desktop-notif").classList.contains("on"),
-    soundOnFail: document.getElementById("sound-fail").classList.contains("on"),
-    imgOverlay: document.getElementById("img-overlay").classList.contains("on"),
-    darkMode: document.getElementById("dark-mode").classList.contains("on"),
-    syncInterval: parseInt(document.getElementById("sync-interval").value, 10),
-    defaultPlatform: document.getElementById("default-platform").value,
+    autoSync: document.getElementById("auto-sync")?.classList.contains("on") ?? true,
+    desktopNotif: document.getElementById("desktop-notif")?.classList.contains("on") ?? true,
+    soundOnFail: document.getElementById("sound-fail")?.classList.contains("on") ?? false,
+    imgOverlay: document.getElementById("img-overlay")?.classList.contains("on") ?? true,
+    darkMode: document.getElementById("dark-mode")?.classList.contains("on") ?? false,
+    syncInterval: parseInt(document.getElementById("sync-interval")?.value || "5", 10),
+    defaultPlatform: document.getElementById("default-platform")?.value || "",
   };
   await chrome.storage.local.set({ settings });
+
+  // Ask the background SW to recreate alarms with the new interval
+  try {
+    await chrome.runtime.sendMessage({ type: "SYNC_NOW" });
+  } catch {}
+
+  showStatus("Settings saved");
+}
+
+function showStatus(msg, isError = false) {
+  let status = document.getElementById("status-msg");
+  if (!status) {
+    status = document.createElement("div");
+    status.id = "status-msg";
+    status.style.cssText = "position:fixed;bottom:16px;left:50%;transform:translateX(-50%);padding:8px 16px;border-radius:6px;font-size:12px;font-weight:500;color:white;background:#10b981;z-index:1000;transition:opacity 0.3s;";
+    document.body.appendChild(status);
+  }
+  status.style.background = isError ? "#ef4444" : "#10b981";
+  status.textContent = msg;
+  status.style.opacity = "1";
+  setTimeout(() => { status.style.opacity = "0"; }, 2000);
 }
