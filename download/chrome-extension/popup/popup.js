@@ -46,6 +46,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   applyDarkMode(await getDarkMode());
 
+  // Bug #9 fix: set forgot-password / terms / privacy links to the local app
+  const webOrigin = API_BASE.replace(/\/api\/?$/, "");
+  const forgotLink = document.getElementById("forgot-link");
+  if (forgotLink) forgotLink.href = `${webOrigin}/forgot-password`;
+  const termsLink = document.getElementById("terms-link");
+  if (termsLink) termsLink.href = `${webOrigin}/terms`;
+  const privacyLink = document.getElementById("privacy-link");
+  if (privacyLink) privacyLink.href = `${webOrigin}/privacy`;
+
   // Bind ALL event listeners first (so they exist regardless of state)
   bindAuthEvents();
   bindNavEvents();
@@ -241,6 +250,12 @@ function validateField(inputId, errorId, kind) {
     const original = document.getElementById("su-password")?.value || document.getElementById("password")?.value || "";
     if (!value) {
       errEl.textContent = "Please confirm your password";
+      return false;
+    }
+    // Bug #15 fix: if the original password field is empty, we can't validate
+    // match — flag this explicitly so the user knows to fill both fields.
+    if (!original) {
+      errEl.textContent = "Please enter your password first";
       return false;
     }
     if (value !== original) {

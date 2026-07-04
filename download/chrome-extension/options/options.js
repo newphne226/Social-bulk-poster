@@ -37,7 +37,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
       await chrome.storage.local.set({ apiBaseUrl: url });
-      if (apiUrlStatus) apiUrlStatus.textContent = "✓ Saved — reload the extension for changes to take effect";
+      // Bug #4 fix: notify the background SW so it picks up the new URL immediately
+      try {
+        await chrome.runtime.sendMessage({ type: "API_URL_CHANGED" });
+      } catch {}
+      if (apiUrlStatus) apiUrlStatus.textContent = "✓ Saved — the extension will use this URL immediately";
       showStatus("API URL saved");
     });
   }

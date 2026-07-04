@@ -45,6 +45,17 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
 
   // Import the token store dynamically to avoid circular imports
   const { activeTokens } = await import("@/app/api/auth/register/route");
+
+  // Bug #11 fix: opportunistic cleanup of expired tokens (every call)
+  // This prevents the Map from growing without bound. In production this
+  // would be a cron job, but for the demo we piggyback on requireAuth.
+  if (activeTokens.size > 1000) {
+    const now = Date.now();
+    for (const [t, info] of activeTokens.entries()) {
+      if (info.expiresAt < now) activeTokens.delete(t);
+    }
+  }
+
   const session = activeTokens.get(token);
 
   if (!session) {

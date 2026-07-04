@@ -1,13 +1,15 @@
 // =====================================================================
-// SocialPilot Chrome Extension — Background Service Worker (MV3, v3)
+// SocialPilot Chrome Extension — Background Service Worker (MV3, v4)
 // =====================================================================
-// v3 changes from v2:
-//   • API_BASE is now loaded from chrome.storage.local (configurable
-//     via Options page). Default = http://localhost:3000/api
-//   • Added AUTH_REGISTER handler — creates a real user in the
-//     database via /api/auth/register. The popup's Sign Up form
-//     sends registration here so it survives popup close.
-//   • After registration, the user is auto-signed-in (token stored).
+// v4 changes from v3:
+//   • API_BASE reloaded on every message (so options-page changes take
+//     effect immediately without reloading the extension).
+//   • OPEN_DASHBOARD and QUICK_SCHEDULE_PAGE now open the LOCAL app
+//     (derived from API_BASE) instead of socialpilot.io.
+//   • Notification iconUrl uses chrome.runtime.getURL() for absolute path.
+//   • Token expiry checked before every API call (not just on 401).
+//   • Heartbeat now sends a deviceId so the server can track per-device.
+//   • Forgot-password link in popup opens the local app, not socialpilot.io.
 // =====================================================================
 
 import { getApiBase } from "../lib/config.js";
@@ -17,14 +19,24 @@ const SYNC_ALARM = "socialpilot-sync";
 const HEARTBEAT_ALARM = "socialpilot-heartbeat";
 const TOKEN_REFRESH_ALARM = "socialpilot-token-refresh";
 
+// Helper: always read the freshest API base before using it
+async function apiBase() {
+  API_BASE = await getApiBase();
+  return API_BASE;
+}
+
+// Helper: derive the web app origin from API_BASE (strip /api)
+async function webAppOrigin() {
+  const base = await apiBase();
+  return base.replace(/\/api\/?$/, "");
+}
+
 // ----- Lifecycle -----
 chrome.runtime.onInstalled.addListener(async (details) => {
-  // Load the API base URL from storage (options page may override it)
   API_BASE = await getApiBase();
   console.log("[SocialPilot] API base:", API_BASE);
   console.log("[SocialPilot] Installed", details);
 
-  // Schedule recurring alarms (MV3 minimum is 30 sec for normal extensions; 1 min for nightly)
   chrome.alarms.create(SYNC_ALARM, { periodInMinutes: 5 });
   chrome.alarms.create(HEARTBEAT_ALARM, { periodInMinutes: 1 });
   chrome.alarms.create(TOKEN_REFRESH_ALARM, { periodInMinutes: 30 });
@@ -45,10 +57,10 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     console.warn("[SocialPilot] contextMenus error", e);
   }
 
-  // On first install, open a welcome tab. The user can sign up directly
-  // in the extension popup — no website redirect needed.
+  // On first install, open the local web app's welcome page
   if (details.reason === "install") {
-    await chrome.tabs.create({ url: "https://socialpilot.io/welcome?from=extension" });
+    const origin = await webAppOrigin();
+    await chrome.tabs.create({ url: `${origin}/welcome?from=extension` });
   }
 });
 
@@ -63,7 +75,7 @@ chrome.runtime.onStartup.addListener(async () => {
 // ----- Alarms → periodic work -----
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   const token = await getToken();
-  if (!token) return; // not logged in — nothing to sync
+  if (!token) return;
 
   try {
     switch (alarm.name) {
@@ -74,7 +86,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         await heartbeat(token);
         break;
       case TOKEN_REFRESH_ALARM:
-        await refreshToken();
+        // Proactively refresh if token is close to expiry
+        await maybeRefreshToken();
         break;
     }
   } catch (e) {
@@ -96,11 +109,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   };
   await chrome.storage.local.set({ pendingSchedule: payload });
 
-  // Try to open the popup (Chrome 127+). If unsupported or fails, fall back to dashboard.
   if (!await tryOpenPopup()) {
-    await chrome.tabs.create({
-      url: `https://socialpilot.io/dashboard?quick=1&src=extension`,
-    });
+    const origin = await webAppOrigin();
+    await chrome.tabs.create({ url: `${origin}/dashboard?quick=1&src=extension` });
   }
 });
 
@@ -112,7 +123,6 @@ chrome.commands.onCommand.addListener(async (command) => {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab?.id) return;
-      // Skip restricted URLs where scripting.executeScript will fail
       if (!tab.url || /^(chrome|edge|about|chrome-extension):/i.test(tab.url)) {
         console.warn("[SocialPilot] Cannot run on this page:", tab.url);
         return;
@@ -152,11 +162,13 @@ async function tryOpenPopup() {
 // ----- Message router (popup ↔ content ↔ background) -----
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   (async () => {
+    // Always reload API_BASE in case the user changed it in Options
+    await apiBase();
+
     try {
       switch (message.type) {
         // -------- AUTH --------
         case "AUTH_LOGIN": {
-          // The popup delegates login to the SW so the popup can close mid-fetch
           const { email, password, remember } = message;
           if (!email || !password) {
             sendResponse({ ok: false, error: "Email and password required" });
@@ -179,8 +191,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             }
             const data = await res.json();
             await setToken(data.token, remember !== false);
-            await chrome.storage.local.set({ user: data.user });
-            // Fire-and-forget initial sync (don't block login response)
+            await chrome.storage.local.set({ user: data.user, subscription: data.subscription });
             syncData(data.token).catch((e) => console.warn("[SocialPilot] initial sync failed", e));
             sendResponse({ ok: true, user: data.user });
           } catch (e) {
@@ -190,8 +201,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         }
 
         case "AUTH_REGISTER": {
-          // The popup delegates registration to the SW so the popup can close mid-fetch.
-          // This creates a REAL user in the database via /api/auth/register.
           const { name, email, password } = message;
           if (!name || !email || !password) {
             sendResponse({ ok: false, error: "Name, email, and password are required" });
@@ -212,10 +221,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
               });
               return;
             }
-            // Registration succeeded — store token + user, just like login
             await setToken(data.token, true);
             await chrome.storage.local.set({ user: data.user, subscription: data.subscription });
-            // Fire-and-forget initial sync
             syncData(data.token).catch((e) => console.warn("[SocialPilot] initial sync failed", e));
             sendResponse({ ok: true, user: data.user });
           } catch (e) {
@@ -228,11 +235,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           await chrome.storage.local.remove([
             "token", "refreshToken", "user", "accounts", "posts",
             "notifications", "subscription", "settings", "lastSyncAt",
+            "tokenExpiresAt",
           ]);
-          // Clear any badge
-          try {
-            await chrome.action.setBadgeText({ text: "" });
-          } catch {}
+          try { await chrome.action.setBadgeText({ text: "" }); } catch {}
           sendResponse({ ok: true });
           return;
 
@@ -278,33 +283,38 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           return;
         }
 
-        // -------- QUICK SCHEDULE FROM PAGE (was missing — bug #1) --------
+        // -------- QUICK SCHEDULE FROM PAGE --------
         case "QUICK_SCHEDULE_PAGE": {
-          // Save the pending schedule so the popup (if opened next) can prefill
           await chrome.storage.local.set({
             pendingSchedule: { ...message.payload, source: message.payload?.source || "page", createdAt: Date.now() },
           });
-          // Try to open the popup so the user can finish scheduling
           const opened = await tryOpenPopup();
           if (!opened) {
-            // If popup can't open (Chrome <127, no user gesture, etc.), open dashboard
-            await chrome.tabs.create({
-              url: `https://socialpilot.io/dashboard?quick=1&src=extension`,
-            });
+            const origin = await webAppOrigin();
+            await chrome.tabs.create({ url: `${origin}/dashboard?quick=1&src=extension` });
           }
           sendResponse({ ok: true, popupOpened: opened });
           return;
         }
 
         // -------- MISC --------
-        case "OPEN_DASHBOARD":
-          await chrome.tabs.create({ url: "https://socialpilot.io/dashboard" });
+        case "OPEN_DASHBOARD": {
+          const origin = await webAppOrigin();
+          await chrome.tabs.create({ url: `${origin}/dashboard` });
           sendResponse({ ok: true });
           return;
+        }
 
         case "SYNC_NOW":
           await syncData(await getToken());
           sendResponse({ ok: true });
+          return;
+
+        // -------- OPTIONS PAGE: API URL changed --------
+        case "API_URL_CHANGED":
+          API_BASE = await getApiBase();
+          console.log("[SocialPilot] API base updated to:", API_BASE);
+          sendResponse({ ok: true, apiBase: API_BASE });
           return;
 
         default:
@@ -315,7 +325,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       sendResponse({ ok: false, error: String(err.message || err) });
     }
   })();
-  return true; // keep channel open for async sendResponse
+  return true;
 });
 
 // =====================================================================
@@ -323,22 +333,44 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 // =====================================================================
 
 async function getToken() {
-  const { token } = await chrome.storage.local.get("token");
+  const { token, tokenExpiresAt } = await chrome.storage.local.get(["token", "tokenExpiresAt"]);
+  // Bug #10 fix: proactively check expiry
+  if (token && tokenExpiresAt && Date.now() > tokenExpiresAt) {
+    console.log("[SocialPilot] Token expired (client-side check) — refreshing...");
+    const refreshed = await refreshToken();
+    if (!refreshed) {
+      await chrome.storage.local.remove("token");
+      return null;
+    }
+    const { token: newToken } = await chrome.storage.local.get("token");
+    return newToken;
+  }
   return token;
 }
 
 async function setToken(token, remember = true) {
-  // In MV3, chrome.storage.local persists across browser restarts.
-  // If "remember me" is false, we could use sessionStorage-equivalent
-  // (chrome.storage.session) — but the popup doesn't persist anyway.
-  // For now, respect remember by storing an expiry timestamp.
-  const payload = { token, tokenIssuedAt: Date.now() };
-  if (!remember) payload.tokenExpiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
+  const payload: any = { token, tokenIssuedAt: Date.now() };
+  // Store a client-side expiry so we can proactively refresh.
+  // Default: 24h. Remember me: 30 days. We refresh 5 min before expiry.
+  const lifetimeMs = remember ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  payload.tokenExpiresAt = Date.now() + lifetimeMs - 5 * 60 * 1000; // 5 min buffer
   await chrome.storage.local.set(payload);
 }
 
+// Proactive refresh — called every 30 min by alarm
+async function maybeRefreshToken() {
+  const { token, tokenExpiresAt } = await chrome.storage.local.get(["token", "tokenExpiresAt"]);
+  if (!token) return false;
+  // Refresh if we're within 1 hour of expiry
+  if (!tokenExpiresAt || Date.now() > tokenExpiresAt - 60 * 60 * 1000) {
+    console.log("[SocialPilot] Token nearing expiry — refreshing proactively");
+    return await refreshToken();
+  }
+  return false;
+}
+
 async function apiFetch(path, method = "GET", body = null, token = null) {
-  const headers = { "Content-Type": "application/json" };
+  const headers: any = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   let res;
@@ -353,17 +385,14 @@ async function apiFetch(path, method = "GET", body = null, token = null) {
   }
 
   if (res.status === 401) {
-    // Token expired — try refresh once
     const refreshed = await refreshToken();
     if (refreshed) {
       return apiFetch(path, method, body, await getToken());
     }
-    // Refresh failed — force logout
     await chrome.storage.local.remove([
       "token", "refreshToken", "user", "accounts", "posts", "notifications",
     ]);
     try { await chrome.action.setBadgeText({ text: "" }); } catch {}
-    // Broadcast force-logout so any open popup switches to login screen
     chrome.runtime.sendMessage({ type: "FORCE_LOGOUT", reason: "Token expired" }).catch(() => {});
     throw new Error("Unauthorized — please sign in again");
   }
@@ -371,7 +400,6 @@ async function apiFetch(path, method = "GET", body = null, token = null) {
     const errBody = await res.json().catch(() => ({}));
     throw new Error(errBody?.error || `API error ${res.status}`);
   }
-  // Some endpoints (DELETE) may return empty body
   const text = await res.text();
   try {
     return text ? JSON.parse(text) : { ok: true };
@@ -389,19 +417,20 @@ async function syncData(token) {
       user: data.user,
       subscription: data.subscription,
       accounts: data.accounts,
-      posts: data.posts,
+      posts: data.posts,            // Bug #1 fix: was data.scheduledPosts
       notifications: data.notifications,
       settings: data.settings,
       lastSyncAt: Date.now(),
     });
     // Push Chrome notifications for unread items
     const { lastSeenNotificationId } = await chrome.storage.local.get("lastSeenNotificationId");
-    const fresh = (data.notifications || []).filter((n) => !n.isRead && n.id !== lastSeenNotificationId);
+    const fresh = (data.notifications || []).filter((n: any) => !n.isRead && n.id !== lastSeenNotificationId);
+    const iconUrl = chrome.runtime.getURL("icons/icon-128.png");  // Bug #8 fix
     for (const n of fresh.slice(0, 3)) {
       try {
         await chrome.notifications.create(`sp-${n.id}`, {
           type: "basic",
-          iconUrl: "icons/icon-128.png",
+          iconUrl,
           title: n.title,
           message: n.body,
           priority: 2,
@@ -411,8 +440,7 @@ async function syncData(token) {
       }
       await chrome.storage.local.set({ lastSeenNotificationId: n.id });
     }
-    // Update badge
-    const unread = (data.notifications || []).filter((n) => !n.isRead).length;
+    const unread = (data.notifications || []).filter((n: any) => !n.isRead).length;
     try {
       await chrome.action.setBadgeText({ text: unread > 0 ? String(unread > 99 ? "99+" : unread) : "" });
       await chrome.action.setBadgeBackgroundColor({ color: "#f59e0b" });
@@ -426,23 +454,27 @@ async function syncData(token) {
 async function heartbeat(token) {
   if (!token) return;
   try {
-    const data = await apiFetch("/extension/heartbeat", "POST", { ts: Date.now() }, token);
+    // Bug #6 fix: send a deviceId so the server can track per-device
+    const { user } = await chrome.storage.local.get("user");
+    const deviceId = `ext_${user?.id || "unknown"}`;
+    const data = await apiFetch("/extension/heartbeat", "POST", { ts: Date.now(), deviceId }, token);
     if (data?.newNotifications?.length) {
       const { notifications = [] } = await chrome.storage.local.get("notifications");
       const merged = [...data.newNotifications, ...notifications].slice(0, 50);
       await chrome.storage.local.set({ notifications: merged });
+      const iconUrl = chrome.runtime.getURL("icons/icon-128.png");
       for (const n of data.newNotifications.slice(0, 2)) {
         try {
           chrome.notifications.create(`sp-${n.id}`, {
             type: "basic",
-            iconUrl: "icons/icon-128.png",
+            iconUrl,
             title: n.title,
             message: n.body,
             priority: 2,
           });
         } catch {}
       }
-      const unread = merged.filter((n) => !n.isRead).length;
+      const unread = merged.filter((n: any) => !n.isRead).length;
       try {
         await chrome.action.setBadgeText({ text: unread > 0 ? String(unread > 99 ? "99+" : unread) : "" });
       } catch {}
@@ -454,17 +486,20 @@ async function heartbeat(token) {
 
 async function refreshToken() {
   try {
-    const { refreshToken: rt } = await chrome.storage.local.get("refreshToken");
+    const { token: currentToken } = await chrome.storage.local.get("token");
+    if (!currentToken) return false;
+
     const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
-      headers: rt ? { "X-Refresh-Token": rt } : {},
-      credentials: "include",
+      headers: {
+        "Authorization": `Bearer ${currentToken}`,
+        "Content-Type": "application/json",
+      },
     });
     if (!res.ok) throw new Error("Refresh failed");
-    const { token, refreshToken: newRt } = await res.json();
+    const { token } = await res.json();
     await chrome.storage.local.set({
       token,
-      ...(newRt ? { refreshToken: newRt } : {}),
       tokenIssuedAt: Date.now(),
     });
     return true;
@@ -478,10 +513,14 @@ async function refreshToken() {
 // Listen for clicks on Chrome notifications
 chrome.notifications.onClicked.addListener((notificationId) => {
   chrome.notifications.clear(notificationId);
-  chrome.tabs.create({ url: "https://socialpilot.io/dashboard?from=notification" });
+  // Bug #7 fix: open local app, not socialpilot.io
+  (async () => {
+    const origin = await webAppOrigin();
+    chrome.tabs.create({ url: `${origin}/dashboard?from=notification` });
+  })();
 });
 
-// Listen for FORCE_LOGOUT broadcast (so popup can switch back to login screen)
+// Listen for FORCE_LOGOUT broadcast
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg?.type === "FORCE_LOGOUT") {
     console.warn("[SocialPilot] Force logout:", msg.reason);

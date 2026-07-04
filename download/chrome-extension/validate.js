@@ -94,12 +94,18 @@ if (fs.existsSync(swPath)) {
   check("SW handles GET_STATE", sw.includes("GET_STATE"));
   check("SW handles QUICK_SCHEDULE_PAGE", sw.includes("QUICK_SCHEDULE_PAGE"));
   check("SW handles OPEN_DASHBOARD", sw.includes("OPEN_DASHBOARD"));
+  check("SW handles API_URL_CHANGED (options page sync)", sw.includes("API_URL_CHANGED"));
   check("SW returns true from onMessage (keep channel open)", sw.includes("return true;"));
   check("SW feature-detects chrome.action.openPopup", sw.includes("typeof chrome.action?.openPopup"));
   check("SW handles 401 → token refresh", sw.includes("res.status === 401"));
   check("SW sends FORCE_LOGOUT on auth failure", sw.includes("FORCE_LOGOUT"));
   check("SW imports config from lib", sw.includes("from \"../lib/config.js\""));
   check("SW posts registration to /auth/register", sw.includes("/auth/register"));
+  check("SW uses chrome.runtime.getURL for notification icon", sw.includes("chrome.runtime.getURL(\"icons/icon-128.png\")"));
+  check("SW reads 'posts' field from sync (not scheduledPosts)", sw.includes("posts: data.posts"));
+  check("SW checks tokenExpiresAt before API calls", sw.includes("tokenExpiresAt"));
+  check("SW sends deviceId in heartbeat", sw.includes("deviceId"));
+  check("SW does NOT redirect to socialpilot.io/dashboard", !sw.includes("https://socialpilot.io/dashboard"));
 }
 
 // 5. Popup HTML/JS consistency
@@ -114,12 +120,13 @@ check("popup.html has signup form (in-extension registration)", popupHtml.includ
 check("popup.html has Google button", popupHtml.includes('id="google-btn"'));
 check("popup.html has password toggle (Sign In)", popupHtml.includes('id="toggle-pw"'));
 check("popup.html has password toggle (Sign Up)", popupHtml.includes('id="su-toggle-pw"'));
-check("popup.html has forgot password link", popupHtml.includes("forgot-password"));
+check("popup.html has forgot password link (local, not socialpilot.io)", popupHtml.includes('id="forgot-link"') && !popupHtml.includes("socialpilot.io/forgot-password"));
 check("popup.html has remember me checkbox", popupHtml.includes('id="remember-me"'));
 check("popup.html has terms checkbox in signup", popupHtml.includes('id="su-terms"'));
 check("popup.html has confirm password field", popupHtml.includes('id="su-confirm"'));
 check("popup.html loads popup.js as module", popupHtml.includes('<script src="popup.js" type="module">'));
 check("popup.html does NOT redirect to socialpilot.io/register", !popupHtml.includes("socialpilot.io/register"));
+check("popup.html does NOT hardcode socialpilot.io in links", !popupHtml.includes("socialpilot.io/terms") && !popupHtml.includes("socialpilot.io/privacy"));
 
 check("popup.js has handleLogin", popupJs.includes("function handleLogin"));
 check("popup.js has handleSignup", popupJs.includes("function handleSignup"));
@@ -132,6 +139,8 @@ check("popup.js has navigator.onLine check", popupJs.includes("navigator.onLine"
 check("popup.js sends AUTH_REGISTER message", popupJs.includes("AUTH_REGISTER"));
 check("popup.js does NOT redirect to socialpilot.io/register", !popupJs.includes("socialpilot.io/register"));
 check("popup.js imports config from lib", popupJs.includes("from \"../lib/config.js\""));
+check("popup.js sets forgot/terms/privacy links dynamically", popupJs.includes("forgot-link") && popupJs.includes("terms-link"));
+check("popup.js confirm validator handles empty password field", popupJs.includes("Please enter your password first"));
 
 // 6. Content script
 console.log("\n6. Content script");

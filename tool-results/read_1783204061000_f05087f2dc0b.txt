@@ -1,0 +1,870 @@
+     1→// =====================================================================
+     2→// SocialPilot Chrome Extension — Popup logic (v3 — in-extension signup)
+     3→// =====================================================================
+     4→// v3 changes from v2:
+     5→//   • Sign Up form is now a FULL registration form (name, email, password,
+     6→//     confirm password, terms checkbox) — no more redirect to website.
+     7→//   • Registration posts to /api/auth/register on the local app and
+     8→//     creates a real user in the database with bcrypt-hashed password.
+     9→//   • After successful registration, the user is auto-signed-in.
+    10→//   • API base URL is loaded from chrome.storage.local (configurable
+    11→//     via Options page). Default = http://localhost:3000/api
+    12→//   • All auth requests go through the background service worker so
+    13→//     they survive popup close.
+    14→// =====================================================================
+    15→
+    16→import { getApiBase } from "../lib/config.js";
+    17→
+    18→let API_BASE = "http://localhost:3000/api";
+    19→
+    20→const PLATFORMS = {
+    21→  facebook: { name: "Facebook", color: "#1877F2", icon: "f" },
+    22→  instagram: { name: "Instagram", color: "#E4405F", icon: "IG" },
+    23→  x: { name: "X", color: "#000000", icon: "X" },
+    24→  linkedin: { name: "LinkedIn", color: "#0A66C2", icon: "in" },
+    25→  pinterest: { name: "Pinterest", color: "#BD081C", icon: "P" },
+    26→};
+    27→
+    28→// State
+    29→let state = {
+    30→  user: null,
+    31→  subscription: null,
+    32→  accounts: [],
+    33→  posts: [],
+    34→  notifications: [],
+    35→  settings: { darkMode: false, timezone: "Asia/Dhaka" },
+    36→};
+    37→let currentSection = "dashboard";
+    38→
+    39→// ---------------------------------------------------------------------
+    40→// Init
+    41→// ---------------------------------------------------------------------
+    42→document.addEventListener("DOMContentLoaded", async () => {
+    43→  // Load the API base URL from storage (options page may override it)
+    44→  API_BASE = await getApiBase();
+    45→  console.log("[SocialPilot] API base:", API_BASE);
+    46→
+    47→  applyDarkMode(await getDarkMode());
+    48→
+    49→  // Bind ALL event listeners first (so they exist regardless of state)
+    50→  bindAuthEvents();
+    51→  bindNavEvents();
+    52→
+    53→  // Check existing token
+    54→  const { token } = await chrome.storage.local.get("token");
+    55→  if (token) {
+    56→    showMain();
+    57→    await loadState();
+    58→    renderSection("dashboard");
+    59→  } else {
+    60→    showLogin();
+    61→  }
+    62→});
+    63→
+    64→// ---------------------------------------------------------------------
+    65→// Auth event bindings
+    66→// ---------------------------------------------------------------------
+    67→function bindAuthEvents() {
+    68→  // Sign In form submit
+    69→  const loginForm = document.getElementById("login-form");
+    70→  if (loginForm) loginForm.addEventListener("submit", handleLogin);
+    71→
+    72→  // Sign Up form submit
+    73→  const signupForm = document.getElementById("signup-form");
+    74→  if (signupForm) signupForm.addEventListener("submit", handleSignup);
+    75→
+    76→  // Google OAuth button
+    77→  const googleBtn = document.getElementById("google-btn");
+    78→  if (googleBtn) googleBtn.addEventListener("click", handleGoogleLogin);
+    79→
+    80→  // Tab switcher (Sign In ↔ Sign Up)
+    81→  document.querySelectorAll(".auth-tab").forEach((tab) => {
+    82→    tab.addEventListener("click", () => switchAuthTab(tab.dataset.authTab));
+    83→  });
+    84→
+    85→  // Inline switch links
+    86→  const goToSignup = document.getElementById("go-to-signup");
+    87→  if (goToSignup) goToSignup.addEventListener("click", () => switchAuthTab("signup"));
+    88→  const goToSignin = document.getElementById("go-to-signin");
+    89→  if (goToSignin) goToSignin.addEventListener("click", () => switchAuthTab("signin"));
+    90→
+    91→  // Password visibility toggle (Sign In)
+    92→  const togglePw = document.getElementById("toggle-pw");
+    93→  if (togglePw) togglePw.addEventListener("click", () => togglePasswordVisibility("password", "toggle-pw"));
+    94→
+    95→  // Password visibility toggle (Sign Up)
+    96→  const suTogglePw = document.getElementById("su-toggle-pw");
+    97→  if (suTogglePw) suTogglePw.addEventListener("click", () => togglePasswordVisibility("su-password", "su-toggle-pw"));
+    98→
+    99→  // Real-time validation — Sign In
+   100→  const emailInput = document.getElementById("email");
+   101→  if (emailInput) emailInput.addEventListener("blur", validateEmailField);
+   102→  if (emailInput) emailInput.addEventListener("input", clearError("email-error"));
+   103→  const pwInput = document.getElementById("password");
+   104→  if (pwInput) pwInput.addEventListener("input", clearError("password-error"));
+   105→
+   106→  // Real-time validation — Sign Up
+   107→  const suName = document.getElementById("su-name");
+   108→  if (suName) suName.addEventListener("input", clearError("su-name-error"));
+   109→  const suEmail = document.getElementById("su-email");
+   110→  if (suEmail) suEmail.addEventListener("blur", () => validateField("su-email", "su-email-error", "email"));
+   111→  if (suEmail) suEmail.addEventListener("input", clearError("su-email-error"));
+   112→  const suPassword = document.getElementById("su-password");
+   113→  if (suPassword) suPassword.addEventListener("input", () => {
+   114→    clearError("su-password-error")();
+   115→    // Also re-validate confirm if it has a value
+   116→    const confirm = document.getElementById("su-confirm");
+   117→    if (confirm && confirm.value) validateField("su-confirm", "su-confirm-error", "confirm");
+   118→  });
+   119→  const suConfirm = document.getElementById("su-confirm");
+   120→  if (suConfirm) suConfirm.addEventListener("input", clearError("su-confirm-error"));
+   121→}
+   122→
+   123→function bindNavEvents() {
+   124→  // Nav rail
+   125→  document.querySelectorAll(".nav-btn[data-section]").forEach((btn) => {
+   126→    btn.addEventListener("click", () => renderSection(btn.dataset.section));
+   127→  });
+   128→
+   129→  // Open dashboard
+   130→  const openDash = document.getElementById("open-dashboard");
+   131→  if (openDash) openDash.addEventListener("click", () => {
+   132→    chrome.runtime.sendMessage({ type: "OPEN_DASHBOARD" });
+   133→  });
+   134→
+   135→  // Header logout
+   136→  const logoutBtn = document.getElementById("logout-btn");
+   137→  if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
+   138→}
+   139→
+   140→// ---------------------------------------------------------------------
+   141→// Auth tab switching
+   142→// ---------------------------------------------------------------------
+   143→function switchAuthTab(which) {
+   144→  const tabs = document.querySelectorAll(".auth-tab");
+   145→  const panels = document.querySelectorAll(".auth-panel");
+   146→  tabs.forEach((t) => {
+   147→    const active = t.dataset.authTab === which;
+   148→    t.classList.toggle("active", active);
+   149→    t.setAttribute("aria-selected", active ? "true" : "false");
+   150→  });
+   151→  panels.forEach((p) => {
+   152→    p.classList.toggle("hidden", p.id !== `${which}-panel`);
+   153→  });
+   154→}
+   155→
+   156→// ---------------------------------------------------------------------
+   157→// Password visibility — generic (works for both Sign In and Sign Up forms)
+   158→// ---------------------------------------------------------------------
+   159→function togglePasswordVisibility(inputId, btnId) {
+   160→  const input = document.getElementById(inputId);
+   161→  const btn = document.getElementById(btnId);
+   162→  if (!input || !btn) return;
+   163→  if (input.type === "password") {
+   164→    input.type = "text";
+   165→    btn.setAttribute("aria-label", "Hide password");
+   166→    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+   167→  } else {
+   168→    input.type = "password";
+   169→    btn.setAttribute("aria-label", "Show password");
+   170→    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+   171→  }
+   172→}
+   173→
+   174→// ---------------------------------------------------------------------
+   175→// Validation
+   176→// ---------------------------------------------------------------------
+   177→function clearError(id) {
+   178→  return () => {
+   179→    const el = document.getElementById(id);
+   180→    if (el) el.textContent = "";
+   181→  };
+   182→}
+   183→
+   184→function validateEmailField() {
+   185→  return validateField("email", "email-error", "email");
+   186→}
+   187→
+   188→function validatePasswordField() {
+   189→  return validateField("password", "password-error", "password");
+   190→}
+   191→
+   192→// Generic field validator
+   193→function validateField(inputId, errorId, kind) {
+   194→  const input = document.getElementById(inputId);
+   195→  const errEl = document.getElementById(errorId);
+   196→  if (!input || !errEl) return false;
+   197→
+   198→  const value = input.value.trim();
+   199→
+   200→  if (kind === "email") {
+   201→    if (!value) {
+   202→      errEl.textContent = "Email is required";
+   203→      return false;
+   204→    }
+   205→    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+   206→    if (!re.test(value)) {
+   207→      errEl.textContent = "Enter a valid email address";
+   208→      return false;
+   209→    }
+   210→    errEl.textContent = "";
+   211→    return true;
+   212→  }
+   213→
+   214→  if (kind === "password") {
+   215→    if (!value) {
+   216→      errEl.textContent = "Password is required";
+   217→      return false;
+   218→    }
+   219→    if (value.length < 6) {
+   220→      errEl.textContent = "Password must be at least 6 characters";
+   221→      return false;
+   222→    }
+   223→    errEl.textContent = "";
+   224→    return true;
+   225→  }
+   226→
+   227→  if (kind === "name") {
+   228→    if (!value) {
+   229→      errEl.textContent = "Name is required";
+   230→      return false;
+   231→    }
+   232→    if (value.length < 2) {
+   233→      errEl.textContent = "Name must be at least 2 characters";
+   234→      return false;
+   235→    }
+   236→    errEl.textContent = "";
+   237→    return true;
+   238→  }
+   239→
+   240→  if (kind === "confirm") {
+   241→    const original = document.getElementById("su-password")?.value || document.getElementById("password")?.value || "";
+   242→    if (!value) {
+   243→      errEl.textContent = "Please confirm your password";
+   244→      return false;
+   245→    }
+   246→    if (value !== original) {
+   247→      errEl.textContent = "Passwords do not match";
+   248→      return false;
+   249→    }
+   250→    errEl.textContent = "";
+   251→    return true;
+   252→  }
+   253→
+   254→  return true;
+   255→}
+   256→
+   257→// ---------------------------------------------------------------------
+   258→// Sign In handler — routes through background SW
+   259→// ---------------------------------------------------------------------
+   260→async function handleLogin(e) {
+   261→  e.preventDefault();
+   262→
+   263→  // Validate
+   264→  const emailOk = validateEmailField();
+   265→  const pwOk = validatePasswordField();
+   266→  if (!emailOk || !pwOk) return;
+   267→
+   268→  // Check online status
+   269→  if (!navigator.onLine) {
+   270→    showToast("You're offline. Check your connection.", "error");
+   271→    return;
+   272→  }
+   273→
+   274→  const btn = document.getElementById("login-btn");
+   275→  const email = document.getElementById("email").value.trim();
+   276→  const password = document.getElementById("password").value;
+   277→  const remember = document.getElementById("remember-me").checked;
+   278→
+   279→  btn.disabled = true;
+   280→  btn.textContent = "Signing in...";
+   281→
+   282→  try {
+   283→    // Send to background SW so login survives popup close
+   284→    const response = await sendMessage({
+   285→      type: "AUTH_LOGIN",
+   286→      email,
+   287→      password,
+   288→      remember,
+   289→    });
+   290→
+   291→    if (response?.ok === false) {
+   292→      throw new Error(response.error || "Login failed");
+   293→    }
+   294→
+   295→    showMain();
+   296→    await loadState();
+   297→    renderSection("dashboard");
+   298→    showToast("Welcome back!", "success");
+   299→  } catch (err) {
+   300→    const msg = String(err.message || err);
+   301→    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+   302→      showToast("Can't reach server. Check your internet.", "error");
+   303→    } else if (msg.includes("401") || msg.toLowerCase().includes("unauthorized")) {
+   304→      showToast("Invalid email or password.", "error");
+   305→      document.getElementById("password-error").textContent = "Check your credentials";
+   306→    } else {
+   307→      showToast(msg || "Login failed.", "error");
+   308→    }
+   309→  } finally {
+   310→    btn.disabled = false;
+   311→    btn.textContent = "Sign In";
+   312→  }
+   313→}
+   314→
+   315→async function handleGoogleLogin() {
+   316→  // Opens the web OAuth flow in a new tab; the web app posts the token back via chrome.runtime
+   317→  await chrome.tabs.create({
+   318→    url: `${API_BASE.replace(/\/api$/, "")}/login?from=extension&provider=google`,
+   319→  });
+   320→  showToast("Complete Google sign-in in the new tab", "info");
+   321→}
+   322→
+   323→// ---------------------------------------------------------------------
+   324→// Sign Up handler — creates a real user in the database via /api/auth/register
+   325→// ---------------------------------------------------------------------
+   326→async function handleSignup(e) {
+   327→  e.preventDefault();
+   328→
+   329→  // Validate all fields
+   330→  const nameOk = validateField("su-name", "su-name-error", "name");
+   331→  const emailOk = validateField("su-email", "su-email-error", "email");
+   332→  const pwOk = validateField("su-password", "su-password-error", "password");
+   333→  const confirmOk = validateField("su-confirm", "su-confirm-error", "confirm");
+   334→
+   335→  const termsCheck = document.getElementById("su-terms");
+   336→  const termsError = document.getElementById("su-terms-error");
+   337→  if (!termsCheck?.checked) {
+   338→    if (termsError) termsError.textContent = "You must agree to the Terms to continue";
+   339→    return;
+   340→  }
+   341→  if (termsError) termsError.textContent = "";
+   342→
+   343→  if (!nameOk || !emailOk || !pwOk || !confirmOk) return;
+   344→
+   345→  // Online check
+   346→  if (!navigator.onLine) {
+   347→    showToast("You're offline. Check your connection.", "error");
+   348→    return;
+   349→  }
+   350→
+   351→  const btn = document.getElementById("signup-btn");
+   352→  const name = document.getElementById("su-name").value.trim();
+   353→  const email = document.getElementById("su-email").value.trim();
+   354→  const password = document.getElementById("su-password").value;
+   355→
+   356→  btn.disabled = true;
+   357→  btn.textContent = "Creating account...";
+   358→
+   359→  try {
+   360→    // Send registration to background SW (survives popup close)
+   361→    const response = await sendMessage({
+   362→      type: "AUTH_REGISTER",
+   363→      name,
+   364→      email,
+   365→      password,
+   366→    });
+   367→
+   368→    if (response?.ok === false) {
+   369→      throw new Error(response.error || "Registration failed");
+   370→    }
+   371→
+   372→    // Registration succeeded — the SW already stored the token + started sync.
+   373→    // Now switch to the main app.
+   374→    showMain();
+   375→    await loadState();
+   376→    renderSection("dashboard");
+   377→    showToast(`Welcome, ${name.split(" ")[0]}! Your account is ready.`, "success");
+   378→  } catch (err) {
+   379→    const msg = String(err.message || err);
+   380→    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+   381→      showToast("Can't reach server. Is the app running?", "error");
+   382→    } else if (msg.includes("409") || msg.toLowerCase().includes("already exists")) {
+   383→      document.getElementById("su-email-error").textContent = "An account with this email already exists";
+   384→      showToast("Email already registered. Try signing in.", "error");
+   385→    } else {
+   386→      showToast(msg || "Registration failed.", "error");
+   387→    }
+   388→  } finally {
+   389→    btn.disabled = false;
+   390→    btn.textContent = "Create Account";
+   391→  }
+   392→}
+   393→
+   394→async function handleLogout() {
+   395→  if (!confirm("Log out of SocialPilot?")) return;
+   396→  await sendMessage({ type: "AUTH_LOGOUT" });
+   397→  showLogin();
+   398→  showToast("Signed out", "info");
+   399→}
+   400→
+   401→// ---------------------------------------------------------------------
+   402→// Message helper — wraps chrome.runtime.sendMessage with timeout
+   403→// ---------------------------------------------------------------------
+   404→function sendMessage(message, timeoutMs = 15000) {
+   405→  return new Promise((resolve) => {
+   406→    let resolved = false;
+   407→    const timer = setTimeout(() => {
+   408→      if (!resolved) {
+   409→        resolved = true;
+   410→        resolve({ ok: false, error: "Timeout — background worker may be inactive" });
+   411→      }
+   412→    }, timeoutMs);
+   413→
+   414→    try {
+   415→      chrome.runtime.sendMessage(message, (response) => {
+   416→        if (resolved) return;
+   417→        resolved = true;
+   418→        clearTimeout(timer);
+   419→        // chrome.runtime.lastError is set if the SW is dead or no handler
+   420→        if (chrome.runtime.lastError) {
+   421→          resolve({ ok: false, error: chrome.runtime.lastError.message });
+   422→          return;
+   423→        }
+   424→        resolve(response ?? { ok: false, error: "No response from background" });
+   425→      });
+   426→    } catch (e) {
+   427→      if (!resolved) {
+   428→        resolved = true;
+   429→        clearTimeout(timer);
+   430→        resolve({ ok: false, error: String(e) });
+   431→      }
+   432→    }
+   433→  });
+   434→}
+   435→
+   436→// ---------------------------------------------------------------------
+   437→// State
+   438→// ---------------------------------------------------------------------
+   439→async function loadState() {
+   440→  const data = await sendMessage({ type: "GET_STATE" });
+   441→  if (data?.ok === false) {
+   442→    console.warn("[SocialPilot] GET_STATE failed:", data.error);
+   443→    // If unauthorized, log out
+   444→    if (data.error?.includes("Unauthorized")) {
+   445→      handleLogout();
+   446→    }
+   447→    return;
+   448→  }
+   449→  if (data) {
+   450→    state.user = data.user;
+   451→    state.subscription = data.subscription;
+   452→    state.accounts = data.accounts || [];
+   453→    state.posts = data.posts || [];
+   454→    state.notifications = data.notifications || [];
+   455→    state.settings = { ...state.settings, ...(data.settings || {}) };
+   456→  }
+   457→  updateUserHeader();
+   458→  updateNotifBadge();
+   459→}
+   460→
+   461→function updateUserHeader() {
+   462→  if (!state.user) return;
+   463→  const avatar = document.getElementById("user-avatar");
+   464→  const name = document.getElementById("user-name");
+   465→  const plan = document.getElementById("user-plan");
+   466→  if (avatar) avatar.src = state.user.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${state.user.email}`;
+   467→  if (name) name.textContent = state.user.name || state.user.email;
+   468→  if (plan) plan.textContent = state.subscription?.plan || "Free";
+   469→}
+   470→
+   471→function updateNotifBadge() {
+   472→  const unread = state.notifications.filter((n) => !n.isRead).length;
+   473→  const badge = document.getElementById("notif-badge");
+   474→  if (!badge) return;
+   475→  if (unread > 0) {
+   476→    badge.textContent = unread > 9 ? "9+" : unread;
+   477→    badge.classList.remove("hidden");
+   478→  } else {
+   479→    badge.classList.add("hidden");
+   480→  }
+   481→}
+   482→
+   483→// ---------------------------------------------------------------------
+   484→// Section rendering
+   485→// ---------------------------------------------------------------------
+   486→function renderSection(section) {
+   487→  currentSection = section;
+   488→  document.querySelectorAll(".nav-btn[data-section]").forEach((b) =>
+   489→    b.classList.toggle("active", b.dataset.section === section)
+   490→  );
+   491→  const content = document.getElementById("content");
+   492→  if (!content) return;
+   493→
+   494→  const renderers = {
+   495→    dashboard: renderDashboard,
+   496→    quick: renderQuick,
+   497→    create: renderCreate,
+   498→    drafts: renderDrafts,
+   499→    media: renderMedia,
+   500→    queue: renderQueue,
+   501→    notifications: renderNotifications,
+   502→    settings: renderSettings,
+   503→  };
+   504→
+   505→  content.innerHTML = (renderers[section] || renderDashboard)();
+   506→  attachSectionHandlers();
+   507→}
+   508→
+   509→function renderDashboard() {
+   510→  const scheduledToday = state.posts.filter((p) => p.status === "SCHEDULED").length;
+   511→  const publishedToday = state.posts.filter((p) => p.status === "PUBLISHED").length;
+   512→  const totalFollowers = state.accounts.reduce((sum, a) => sum + (a.followerCount || 0), 0);
+   513→
+   514→  return `
+   515→    <div class="card">
+   516→      <div class="greeting">Hey ${escapeHtml(state.user?.name?.split(" ")[0] || "there")} 👋</div>
+   517→      <div class="greeting-sub">You have ${scheduledToday} posts scheduled today</div>
+   518→      <div class="stats-grid">
+   519→        <div class="stat"><div class="stat-label">Followers</div><div class="stat-value">${formatNum(totalFollowers)}</div></div>
+   520→        <div class="stat"><div class="stat-label">Posts today</div><div class="stat-value">${publishedToday}</div></div>
+   521→      </div>
+   522→    </div>
+   523→    <div class="card">
+   524→      <div class="section-title">Quick Actions</div>
+   525→      <div class="quick-actions">
+   526→        <button class="quick-action" data-action="quick">
+   527→          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+   528→          Quick
+   529→        </button>
+   530→        <button class="quick-action" data-action="create">
+   531→          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+   532→          Create
+   533→        </button>
+   534→        <button class="quick-action" data-action="ai">
+   535→          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+   536→          AI
+   537→        </button>
+   538→      </div>
+   539→    </div>
+   540→    <div class="section-title">Coming up next</div>
+   541→    ${state.posts.filter((p) => p.status === "SCHEDULED").slice(0, 3).map(renderPostItem).join("") || emptyState("No posts scheduled")}
+   542→  `;
+   543→}
+   544→
+   545→function renderQuick() {
+   546→  if (!state.accounts.length) {
+   547→    return emptyState("Connect a social account first");
+   548→  }
+   549→  return `
+   550→    <div class="section-title">Quick Schedule</div>
+   551→    <div class="card">
+   552→      <label for="quick-caption">Caption</label>
+   553→      <textarea id="quick-caption" placeholder="What's on your mind?"></textarea>
+   554→      <label for="quick-account">Account</label>
+   555→      <select id="quick-account">
+   556→        ${state.accounts.map((a) => `<option value="${a.id}">${escapeHtml(PLATFORMS[a.platform]?.name || a.platform)} · ${escapeHtml(a.displayName)}</option>`).join("")}
+   557→      </select>
+   558→      <label for="quick-time">Schedule for</label>
+   559→      <input type="datetime-local" id="quick-time" />
+   560→      <div class="btn-row">
+   561→        <button class="btn-secondary" id="quick-schedule-btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; border: none;">Schedule</button>
+   562→      </div>
+   563→    </div>
+   564→  `;
+   565→}
+   566→
+   567→function renderCreate() {
+   568→  if (!state.accounts.length) {
+   569→    return emptyState("Connect a social account first");
+   570→  }
+   571→  return `
+   572→    <div class="section-title">Create Post</div>
+   573→    <div class="card">
+   574→      <label for="create-caption">Caption</label>
+   575→      <textarea id="create-caption" placeholder="Write your post..."></textarea>
+   576→      <label>Media</label>
+   577→      <div style="border: 2px dashed var(--border); padding: 16px; text-align: center; border-radius: 8px; color: var(--text-muted); font-size: 11px; cursor: pointer;" id="create-drop">
+   578→        Click or drop files here
+   579→      </div>
+   580→      <label>Post to</label>
+   581→      <div class="platform-chips" id="create-platforms">
+   582→        ${state.accounts.map((a) => `
+   583→          <div class="platform-chip" data-account="${a.id}">
+   584→            <span class="pdot" style="background: ${PLATFORMS[a.platform]?.color || '#888'}"></span>
+   585→            ${escapeHtml(a.displayName)}
+   586→          </div>
+   587→        `).join("")}
+   588→      </div>
+   589→      <label for="create-hashtags">Hashtags</label>
+   590→      <input type="text" id="create-hashtags" placeholder="#socialmedia #marketing" />
+   591→      <div class="btn-row">
+   592→        <button class="btn-secondary" id="create-draft-btn">Save Draft</button>
+   593→        <button class="btn-secondary" id="create-schedule-btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; border: none;">Schedule</button>
+   594→      </div>
+   595→    </div>
+   596→  `;
+   597→}
+   598→
+   599→function renderDrafts() {
+   600→  const drafts = state.posts.filter((p) => p.status === "DRAFT");
+   601→  return `
+   602→    <div class="section-title">Drafts (${drafts.length})</div>
+   603→    ${drafts.map(renderPostItem).join("") || emptyState("No drafts yet")}
+   604→  `;
+   605→}
+   606→
+   607→function renderMedia() {
+   608→  return `
+   609→    <div class="section-title">Media Library</div>
+   610→    <div class="card">
+   611→      <div class="media-grid">
+   612→        ${[1, 2, 3, 4, 5, 6].map((i) => `<img src="https://picsum.photos/seed/ext${i}/100/100" alt="" />`).join("")}
+   613→      </div>
+   614→      <button class="btn-secondary" style="margin-top: 8px; width: 100%;">Upload more</button>
+   615→    </div>
+   616→  `;
+   617→}
+   618→
+   619→function renderQueue() {
+   620→  const queued = state.posts
+   621→    .filter((p) => p.status === "SCHEDULED" || p.status === "QUEUED")
+   622→    .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
+   623→  return `
+   624→    <div class="section-title">Schedule Queue (${queued.length})</div>
+   625→    ${queued.map(renderPostItem).join("") || emptyState("Queue is empty")}
+   626→  `;
+   627→}
+   628→
+   629→function renderNotifications() {
+   630→  return `
+   631→    <div class="section-title">Notifications</div>
+   632→    ${state.notifications.map((n) => `
+   633→      <div class="notif-item ${!n.isRead ? "unread" : ""}">
+   634→        <div class="notif-icon ${n.type === "POST_FAILED" ? "failed" : n.type === "POST_PUBLISHED" ? "success" : "info"}">
+   635→          ${n.type === "POST_FAILED" ? "!" : n.type === "POST_PUBLISHED" ? "✓" : "i"}
+   636→        </div>
+   637→        <div style="flex: 1; min-width: 0;">
+   638→          <div style="font-size: 12px; font-weight: 600;">${escapeHtml(n.title)}</div>
+   639→          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${escapeHtml(n.body)}</div>
+   640→          <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px;">${timeAgo(n.createdAt)}</div>
+   641→        </div>
+   642→      </div>
+   643→    `).join("") || emptyState("No notifications")}
+   644→  `;
+   645→}
+   646→
+   647→function renderSettings() {
+   648→  return `
+   649→    <div class="section-title">Settings</div>
+   650→    <div class="card">
+   651→      <div class="toggle-row">
+   652→        <div>
+   653→          <div style="font-size: 12px; font-weight: 600;">Dark Mode</div>
+   654→          <div style="font-size: 10px; color: var(--text-muted);">Toggle dark theme for the popup</div>
+   655→        </div>
+   656→        <div class="toggle ${state.settings.darkMode ? "on" : ""}" id="dark-toggle" role="switch" aria-checked="${state.settings.darkMode}"></div>
+   657→      </div>
+   658→      <div class="toggle-row">
+   659→        <div>
+   660→          <div style="font-size: 12px; font-weight: 600;">Timezone</div>
+   661→          <div style="font-size: 10px; color: var(--text-muted);">For scheduling display</div>
+   662→        </div>
+   663→      </div>
+   664→      <select id="tz-select">
+   665→        <option value="Asia/Dhaka" ${state.settings.timezone === "Asia/Dhaka" ? "selected" : ""}>Asia/Dhaka (UTC+6)</option>
+   666→        <option value="America/New_York" ${state.settings.timezone === "America/New_York" ? "selected" : ""}>America/New_York (UTC-5)</option>
+   667→        <option value="Europe/London" ${state.settings.timezone === "Europe/London" ? "selected" : ""}>Europe/London (UTC+0)</option>
+   668→        <option value="Asia/Tokyo" ${state.settings.timezone === "Asia/Tokyo" ? "selected" : ""}>Asia/Tokyo (UTC+9)</option>
+   669→      </select>
+   670→      <div class="toggle-row">
+   671→        <div>
+   672→          <div style="font-size: 12px; font-weight: 600;">Auto-sync</div>
+   673→          <div style="font-size: 10px; color: var(--text-muted);">Sync every 5 minutes</div>
+   674→        </div>
+   675→        <div class="toggle on" id="sync-toggle" role="switch" aria-checked="true"></div>
+   676→      </div>
+   677→    </div>
+   678→    <div class="card">
+   679→      <div style="font-size: 11px; color: var(--text-muted);">Account</div>
+   680→      <div style="font-size: 13px; font-weight: 600; margin-top: 4px;">${escapeHtml(state.user?.email || "—")}</div>
+   681→      <button class="btn-secondary" id="logout-full-btn" style="margin-top: 10px; width: 100%; color: var(--danger);">Log out</button>
+   682→    </div>
+   683→  `;
+   684→}
+   685→
+   686→function renderPostItem(p) {
+   687→  const plat = PLATFORMS[p.platform] || { color: "#888", icon: "?" };
+   688→  return `
+   689→    <div class="post-item">
+   690→      <div class="post-icon" style="background: ${plat.color}">${plat.icon}</div>
+   691→      <div class="post-content">
+   692→        <div class="post-meta">${escapeHtml(p.accountUsername || "")} <span class="status-badge status-${p.status}">${p.status}</span></div>
+   693→        <div class="post-caption">${escapeHtml(p.caption)}</div>
+   694→        ${p.scheduledAt ? `<div class="post-time">⏰ ${new Date(p.scheduledAt).toLocaleString()}</div>` : ""}
+   695→      </div>
+   696→    </div>
+   697→  `;
+   698→}
+   699→
+   700→function emptyState(msg) {
+   701→  return `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/></svg><div>${escapeHtml(msg)}</div></div>`;
+   702→}
+   703→
+   704→// ---------------------------------------------------------------------
+   705→// Section handlers
+   706→// ---------------------------------------------------------------------
+   707→function attachSectionHandlers() {
+   708→  // Dashboard quick actions
+   709→  document.querySelectorAll(".quick-action").forEach((b) => {
+   710→    b.addEventListener("click", () => renderSection(b.dataset.action));
+   711→  });
+   712→
+   713→  // Quick schedule
+   714→  const qsBtn = document.getElementById("quick-schedule-btn");
+   715→  if (qsBtn) qsBtn.addEventListener("click", handleQuickSchedule);
+   716→
+   717→  // Create post
+   718→  const csBtn = document.getElementById("create-schedule-btn");
+   719→  if (csBtn) csBtn.addEventListener("click", () => handleCreatePost(false));
+   720→  const cdBtn = document.getElementById("create-draft-btn");
+   721→  if (cdBtn) cdBtn.addEventListener("click", () => handleCreatePost(true));
+   722→  document.querySelectorAll("#create-platforms .platform-chip").forEach((c) => {
+   723→    c.addEventListener("click", () => c.classList.toggle("selected"));
+   724→  });
+   725→
+   726→  // Settings
+   727→  const dt = document.getElementById("dark-toggle");
+   728→  if (dt) dt.addEventListener("click", handleDarkToggle);
+   729→  const st = document.getElementById("sync-toggle");
+   730→  if (st) st.addEventListener("click", () => {
+   731→    st.classList.toggle("on");
+   732→    st.setAttribute("aria-checked", st.classList.contains("on"));
+   733→  });
+   734→  const tz = document.getElementById("tz-select");
+   735→  if (tz) tz.addEventListener("change", async (e) => {
+   736→    state.settings.timezone = e.target.value;
+   737→    await chrome.storage.local.set({ settings: state.settings });
+   738→    showToast("Timezone updated", "success");
+   739→  });
+   740→  const lo = document.getElementById("logout-full-btn");
+   741→  if (lo) lo.addEventListener("click", handleLogout);
+   742→}
+   743→
+   744→async function handleQuickSchedule() {
+   745→  const caption = document.getElementById("quick-caption").value.trim();
+   746→  const accountId = document.getElementById("quick-account").value;
+   747→  const time = document.getElementById("quick-time").value;
+   748→  if (!caption) return showToast("Caption required", "error");
+   749→  if (!accountId) return showToast("Select an account", "error");
+   750→  if (!time) return showToast("Schedule time required", "error");
+   751→
+   752→  const scheduledAt = new Date(time).toISOString();
+   753→  if (new Date(scheduledAt) <= new Date()) {
+   754→    return showToast("Schedule time must be in the future", "error");
+   755→  }
+   756→
+   757→  showLoading(true);
+   758→  try {
+   759→    const res = await sendMessage({
+   760→      type: "SCHEDULE_POST",
+   761→      payload: { caption, accountId, scheduledAt },
+   762→    });
+   763→    if (res?.ok === false) throw new Error(res.error);
+   764→    showToast("Post scheduled!", "success");
+   765→    await loadState();
+   766→    renderSection("dashboard");
+   767→  } catch (e) {
+   768→    showToast("Failed to schedule: " + (e.message || e), "error");
+   769→  } finally {
+   770→    showLoading(false);
+   771→  }
+   772→}
+   773→
+   774→async function handleCreatePost(asDraft = false) {
+   775→  const caption = document.getElementById("create-caption").value.trim();
+   776→  const hashtags = document.getElementById("create-hashtags").value.trim();
+   777→  const selected = Array.from(document.querySelectorAll("#create-platforms .platform-chip.selected"))
+   778→    .map((c) => c.dataset.account);
+   779→  if (!caption) return showToast("Caption required", "error");
+   780→  if (selected.length === 0 && !asDraft) return showToast("Select at least one account", "error");
+   781→
+   782→  showLoading(true);
+   783→  try {
+   784→    const type = asDraft ? "CREATE_POST" : "SCHEDULE_POST";
+   785→    const res = await sendMessage({
+   786→      type,
+   787→      payload: {
+   788→        caption,
+   789→        hashtags: hashtags.split(/\s+/).filter(Boolean),
+   790→        accountIds: selected,
+   791→        status: asDraft ? "DRAFT" : "SCHEDULED",
+   792→      },
+   793→    });
+   794→    if (res?.ok === false) throw new Error(res.error);
+   795→    showToast(asDraft ? "Draft saved" : "Post scheduled!", "success");
+   796→    renderSection("dashboard");
+   797→  } catch (e) {
+   798→    showToast("Failed: " + (e.message || e), "error");
+   799→  } finally {
+   800→    showLoading(false);
+   801→  }
+   802→}
+   803→
+   804→async function handleDarkToggle() {
+   805→  state.settings.darkMode = !state.settings.darkMode;
+   806→  await chrome.storage.local.set({ settings: state.settings });
+   807→  applyDarkMode(state.settings.darkMode);
+   808→  renderSection("settings");
+   809→}
+   810→
+   811→// ---------------------------------------------------------------------
+   812→// Utilities
+   813→// ---------------------------------------------------------------------
+   814→async function getDarkMode() {
+   815→  const { settings } = await chrome.storage.local.get("settings");
+   816→  return settings?.darkMode || false;
+   817→}
+   818→
+   819→function applyDarkMode(on) {
+   820→  document.body.classList.toggle("dark", on);
+   821→}
+   822→
+   823→function showLogin() {
+   824→  document.getElementById("login-screen").classList.remove("hidden");
+   825→  document.getElementById("main-screen").classList.add("hidden");
+   826→}
+   827→
+   828→function showMain() {
+   829→  document.getElementById("login-screen").classList.add("hidden");
+   830→  document.getElementById("main-screen").classList.remove("hidden");
+   831→}
+   832→
+   833→function showLoading(on) {
+   834→  document.getElementById("loading").classList.toggle("hidden", !on);
+   835→}
+   836→
+   837→function showToast(msg, kind = "info") {
+   838→  const existing = document.querySelector(".toast");
+   839→  if (existing) existing.remove();
+   840→  const t = document.createElement("div");
+   841→  t.className = "toast toast-" + kind;
+   842→  t.textContent = msg;
+   843→  document.body.appendChild(t);
+   844→  setTimeout(() => t.remove(), 2800);
+   845→}
+   846→
+   847→function formatNum(n) {
+   848→  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+   849→  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
+   850→  return String(n);
+   851→}
+   852→
+   853→function timeAgo(iso) {
+   854→  if (!iso) return "";
+   855→  const diff = Date.now() - new Date(iso).getTime();
+   856→  if (diff < 0) return "in the future";
+   857→  const mins = Math.floor(diff / 60000);
+   858→  if (mins < 1) return "just now";
+   859→  if (mins < 60) return `${mins}m ago`;
+   860→  const hours = Math.floor(mins / 60);
+   861→  if (hours < 24) return `${hours}h ago`;
+   862→  return `${Math.floor(hours / 24)}d ago`;
+   863→}
+   864→
+   865→function escapeHtml(s) {
+   866→  const div = document.createElement("div");
+   867→  div.textContent = s || "";
+   868→  return div.innerHTML;
+   869→}
+   870→
