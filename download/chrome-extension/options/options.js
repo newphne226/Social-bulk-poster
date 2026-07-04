@@ -1,18 +1,55 @@
 // =====================================================================
-// SocialPilot Chrome Extension — Options page logic (v2)
+// SocialPilot Chrome Extension — Options page logic (v3)
 // =====================================================================
-// v2 changes:
+// v3 changes:
+//   • API base URL config — point the extension at any deployment
 //   • Guard against missing elements
 //   • Sync interval validation (min 1, max 60)
 //   • Logout button shows confirmation feedback
-//   • Save settings also updates the SW alarms immediately
 // =====================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const { user, settings = {} } = await chrome.storage.local.get(["user", "settings"]);
+  const { user, settings = {}, apiBaseUrl } = await chrome.storage.local.get([
+    "user", "settings", "apiBaseUrl",
+  ]);
 
   const emailEl = document.getElementById("user-email");
   if (emailEl) emailEl.textContent = user?.email || "Not logged in";
+
+  // ----- API base URL -----
+  const apiUrlInput = document.getElementById("api-base-url");
+  const apiUrlStatus = document.getElementById("api-url-status");
+  if (apiUrlInput) {
+    apiUrlInput.value = apiBaseUrl || "http://localhost:3000/api";
+  }
+  const saveApiUrl = document.getElementById("save-api-url");
+  if (saveApiUrl) {
+    saveApiUrl.addEventListener("click", async () => {
+      const url = apiUrlInput.value.trim().replace(/\/$/, "");
+      if (!url) {
+        if (apiUrlStatus) apiUrlStatus.textContent = "URL cannot be empty";
+        return;
+      }
+      try {
+        new URL(url);
+      } catch {
+        if (apiUrlStatus) apiUrlStatus.textContent = "Invalid URL";
+        return;
+      }
+      await chrome.storage.local.set({ apiBaseUrl: url });
+      if (apiUrlStatus) apiUrlStatus.textContent = "✓ Saved — reload the extension for changes to take effect";
+      showStatus("API URL saved");
+    });
+  }
+  const resetApiUrl = document.getElementById("reset-api-url");
+  if (resetApiUrl) {
+    resetApiUrl.addEventListener("click", async () => {
+      await chrome.storage.local.remove("apiBaseUrl");
+      if (apiUrlInput) apiUrlInput.value = "http://localhost:3000/api";
+      if (apiUrlStatus) apiUrlStatus.textContent = "✓ Reset to default";
+      showStatus("API URL reset to default");
+    });
+  }
 
   // Load saved toggles
   setToggle("auto-sync", settings.autoSync !== false);

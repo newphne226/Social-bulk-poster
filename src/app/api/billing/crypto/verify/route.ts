@@ -12,7 +12,7 @@ import { getSession, updateSession, verifyTxOnChain, CRYPTO_CONFIG } from "@/lib
 //      internal logic to bump the user's plan)
 
 export async function POST(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
   try {

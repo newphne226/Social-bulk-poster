@@ -13,6 +13,10 @@
     "scripting"
   ],
   "host_permissions": [
+    "http://localhost/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1/*",
+    "http://127.0.0.1:3000/*",
     "https://*.socialpilot.io/*",
     "https://api.socialpilot.io/*"
   ],
@@ -47,7 +51,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["icons/*", "options/*"],
+      "resources": ["icons/*", "options/*", "lib/*"],
       "matches": ["<all_urls>"]
     }
   ],

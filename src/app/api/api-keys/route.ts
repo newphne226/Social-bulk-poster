@@ -20,14 +20,14 @@ const API_KEYS: ApiKeyRow[] = [
 ];
 
 export async function GET(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
   return NextResponse.json({ apiKeys: API_KEYS, total: API_KEYS.length });
 }
 
 export async function POST(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
   const body = await request.json().catch(() => ({}));

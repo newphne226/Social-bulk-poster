@@ -15,14 +15,14 @@ let SUBSCRIPTION = {
 };
 
 export async function GET(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
   return NextResponse.json({ subscription: SUBSCRIPTION });
 }
 
 export async function PUT(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
   const body = await request.json().catch(() => ({}));

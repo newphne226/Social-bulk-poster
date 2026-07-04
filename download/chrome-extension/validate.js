@@ -77,6 +77,7 @@ const filesToCheck = [
   ...(manifest.content_scripts?.flatMap(cs => [...(cs.js || []), ...(cs.css || [])]) || []),
   manifest.options_page,
   ...(manifest.icons ? Object.values(manifest.icons) : []),
+  "lib/config.js", // shared config module imported by popup.js and SW
 ];
 filesToCheck.forEach((f) => {
   if (f) check(`${f} exists`, fs.existsSync(path.join(EXT_DIR, f)));
@@ -88,6 +89,7 @@ const swPath = path.join(EXT_DIR, manifest.background?.service_worker || "backgr
 if (fs.existsSync(swPath)) {
   const sw = fs.readFileSync(swPath, "utf8");
   check("SW handles AUTH_LOGIN", sw.includes("AUTH_LOGIN"));
+  check("SW handles AUTH_REGISTER (in-extension signup)", sw.includes("AUTH_REGISTER"));
   check("SW handles AUTH_LOGOUT", sw.includes("AUTH_LOGOUT"));
   check("SW handles GET_STATE", sw.includes("GET_STATE"));
   check("SW handles QUICK_SCHEDULE_PAGE", sw.includes("QUICK_SCHEDULE_PAGE"));
@@ -96,6 +98,8 @@ if (fs.existsSync(swPath)) {
   check("SW feature-detects chrome.action.openPopup", sw.includes("typeof chrome.action?.openPopup"));
   check("SW handles 401 → token refresh", sw.includes("res.status === 401"));
   check("SW sends FORCE_LOGOUT on auth failure", sw.includes("FORCE_LOGOUT"));
+  check("SW imports config from lib", sw.includes("from \"../lib/config.js\""));
+  check("SW posts registration to /auth/register", sw.includes("/auth/register"));
 }
 
 // 5. Popup HTML/JS consistency
@@ -106,21 +110,28 @@ const popupJs = fs.readFileSync(path.join(EXT_DIR, "popup/popup.js"), "utf8");
 check("popup.html has Sign In tab", popupHtml.includes('data-auth-tab="signin"'));
 check("popup.html has Sign Up tab", popupHtml.includes('data-auth-tab="signup"'));
 check("popup.html has login form", popupHtml.includes('id="login-form"'));
+check("popup.html has signup form (in-extension registration)", popupHtml.includes('id="signup-form"'));
 check("popup.html has Google button", popupHtml.includes('id="google-btn"'));
-check("popup.html has Sign Up web button", popupHtml.includes('id="signup-web-btn"'));
-check("popup.html has password toggle", popupHtml.includes('id="toggle-pw"'));
+check("popup.html has password toggle (Sign In)", popupHtml.includes('id="toggle-pw"'));
+check("popup.html has password toggle (Sign Up)", popupHtml.includes('id="su-toggle-pw"'));
 check("popup.html has forgot password link", popupHtml.includes("forgot-password"));
 check("popup.html has remember me checkbox", popupHtml.includes('id="remember-me"'));
-check("popup.html loads popup.js (non-module)", popupHtml.includes('<script src="popup.js"></script>'));
+check("popup.html has terms checkbox in signup", popupHtml.includes('id="su-terms"'));
+check("popup.html has confirm password field", popupHtml.includes('id="su-confirm"'));
+check("popup.html loads popup.js as module", popupHtml.includes('<script src="popup.js" type="module">'));
+check("popup.html does NOT redirect to socialpilot.io/register", !popupHtml.includes("socialpilot.io/register"));
 
 check("popup.js has handleLogin", popupJs.includes("function handleLogin"));
+check("popup.js has handleSignup", popupJs.includes("function handleSignup"));
 check("popup.js has switchAuthTab", popupJs.includes("function switchAuthTab"));
-check("popup.js has validateEmailField", popupJs.includes("function validateEmailField"));
-check("popup.js has togglePasswordVisibility", popupJs.includes("function togglePasswordVisibility"));
+check("popup.js has validateField (generic)", popupJs.includes("function validateField"));
+check("popup.js has togglePasswordVisibility (generic)", popupJs.includes("function togglePasswordVisibility"));
 check("popup.js has sendMessage helper", popupJs.includes("function sendMessage"));
 check("popup.js has chrome.runtime.lastError check", popupJs.includes("chrome.runtime.lastError"));
 check("popup.js has navigator.onLine check", popupJs.includes("navigator.onLine"));
-check("popup.js does NOT do direct fetch for login (routes through SW)", !popupJs.includes("fetch(`${API_BASE}/auth/login`"));
+check("popup.js sends AUTH_REGISTER message", popupJs.includes("AUTH_REGISTER"));
+check("popup.js does NOT redirect to socialpilot.io/register", !popupJs.includes("socialpilot.io/register"));
+check("popup.js imports config from lib", popupJs.includes("from \"../lib/config.js\""));
 
 // 6. Content script
 console.log("\n6. Content script");

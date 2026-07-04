@@ -86,19 +86,46 @@
             </div>
             <h3>Create your account</h3>
             <p class="signup-desc">
-              For security reasons, account registration is only available on our website.
-              Click below to sign up — it takes less than a minute.
+              Sign up right here — your account will be created in our database
+              and you can start scheduling immediately.
             </p>
-            <button type="button" class="btn-primary" id="signup-web-btn">
-              Create Account on socialpilot.io
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:6px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </button>
-            <ul class="signup-benefits">
-              <li>✓ Free plan forever — no credit card required</li>
-              <li>✓ Schedule across 5 social platforms</li>
-              <li>✓ AI captions, hashtags & emoji</li>
-              <li>✓ Cancel anytime</li>
-            </ul>
+
+            <form id="signup-form" novalidate>
+              <label for="su-name">Full name</label>
+              <input type="text" id="su-name" required placeholder="Jane Doe" autocomplete="name" />
+              <div class="error-text" id="su-name-error"></div>
+
+              <label for="su-email">Email</label>
+              <input type="email" id="su-email" required placeholder="you@example.com" autocomplete="email" />
+              <div class="error-text" id="su-email-error"></div>
+
+              <label for="su-password">Password</label>
+              <div class="password-wrap">
+                <input type="password" id="su-password" required placeholder="At least 6 characters" autocomplete="new-password" />
+                <button type="button" class="toggle-pw" id="su-toggle-pw" aria-label="Show password" tabindex="-1">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="error-text" id="su-password-error"></div>
+
+              <label for="su-confirm">Confirm password</label>
+              <input type="password" id="su-confirm" required placeholder="Re-enter your password" autocomplete="new-password" />
+              <div class="error-text" id="su-confirm-error"></div>
+
+              <label class="checkbox-row" style="margin-top: 8px;">
+                <input type="checkbox" id="su-terms" required />
+                <span>I agree to the <a href="https://socialpilot.io/terms" target="_blank" rel="noopener" class="link-muted">Terms</a> and <a href="https://socialpilot.io/privacy" target="_blank" rel="noopener" class="link-muted">Privacy Policy</a></span>
+              </label>
+              <div class="error-text" id="su-terms-error"></div>
+
+              <button type="submit" class="btn-primary" id="signup-btn">
+                Create Account
+              </button>
+            </form>
+
             <p class="switch-text">
               Already have an account?
               <button type="button" class="link-accent" id="go-to-signin">Sign In</button>
@@ -106,7 +133,7 @@
           </div>
         </div>
 
-        <p class="security-note">🔒 The extension only supports Sign In. Registration happens on the website.</p>
+        <p class="security-note">🔒 Your account is created securely in our database. We never share your data.</p>
       </section>
 
       <!-- ===================== MAIN APP (after login) ===================== -->
@@ -163,6 +190,6 @@
 
       <div id="loading" class="loading hidden"><div class="spinner"></div></div>
     </div>
-    <script src="popup.js"></script>
+    <script src="popup.js" type="module"></script>
   </body>
 </html>

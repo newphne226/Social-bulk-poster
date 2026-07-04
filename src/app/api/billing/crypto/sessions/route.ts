@@ -6,7 +6,7 @@ import { listUserSessions, CRYPTO_CONFIG } from "@/lib/crypto-config";
 // Returns the user's crypto payment history.
 
 export async function GET(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
   const sessions = listUserSessions(auth.user.userId);

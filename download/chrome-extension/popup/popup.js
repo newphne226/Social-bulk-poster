@@ -1,19 +1,21 @@
 // =====================================================================
-// SocialPilot Chrome Extension — Popup logic (v2 — bug-fixed)
+// SocialPilot Chrome Extension — Popup logic (v3 — in-extension signup)
 // =====================================================================
-// Major changes from v1:
-//   • Login now goes through background SW (popup can close safely)
-//   • Sign In / Sign Up tab switcher
-//   • Password visibility toggle
-//   • Inline validation errors
-//   • Forgot password link
-//   • Remember me checkbox (controls token persistence)
-//   • Email validation before submit
-//   • Offline state handling
-//   • Timezone <option> now has explicit value attribute
+// v3 changes from v2:
+//   • Sign Up form is now a FULL registration form (name, email, password,
+//     confirm password, terms checkbox) — no more redirect to website.
+//   • Registration posts to /api/auth/register on the local app and
+//     creates a real user in the database with bcrypt-hashed password.
+//   • After successful registration, the user is auto-signed-in.
+//   • API base URL is loaded from chrome.storage.local (configurable
+//     via Options page). Default = http://localhost:3000/api
+//   • All auth requests go through the background service worker so
+//     they survive popup close.
 // =====================================================================
 
-const API_BASE = "https://api.socialpilot.io/v1";
+import { getApiBase } from "../lib/config.js";
+
+let API_BASE = "http://localhost:3000/api";
 
 const PLATFORMS = {
   facebook: { name: "Facebook", color: "#1877F2", icon: "f" },
@@ -38,6 +40,10 @@ let currentSection = "dashboard";
 // Init
 // ---------------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", async () => {
+  // Load the API base URL from storage (options page may override it)
+  API_BASE = await getApiBase();
+  console.log("[SocialPilot] API base:", API_BASE);
+
   applyDarkMode(await getDarkMode());
 
   // Bind ALL event listeners first (so they exist regardless of state)
@@ -63,15 +69,13 @@ function bindAuthEvents() {
   const loginForm = document.getElementById("login-form");
   if (loginForm) loginForm.addEventListener("submit", handleLogin);
 
+  // Sign Up form submit
+  const signupForm = document.getElementById("signup-form");
+  if (signupForm) signupForm.addEventListener("submit", handleSignup);
+
   // Google OAuth button
   const googleBtn = document.getElementById("google-btn");
   if (googleBtn) googleBtn.addEventListener("click", handleGoogleLogin);
-
-  // Sign Up button → opens website registration
-  const signupWebBtn = document.getElementById("signup-web-btn");
-  if (signupWebBtn) signupWebBtn.addEventListener("click", () => {
-    chrome.tabs.create({ url: "https://socialpilot.io/register?from=extension" });
-  });
 
   // Tab switcher (Sign In ↔ Sign Up)
   document.querySelectorAll(".auth-tab").forEach((tab) => {
@@ -84,17 +88,36 @@ function bindAuthEvents() {
   const goToSignin = document.getElementById("go-to-signin");
   if (goToSignin) goToSignin.addEventListener("click", () => switchAuthTab("signin"));
 
-  // Password visibility toggle
+  // Password visibility toggle (Sign In)
   const togglePw = document.getElementById("toggle-pw");
-  if (togglePw) togglePw.addEventListener("click", togglePasswordVisibility);
+  if (togglePw) togglePw.addEventListener("click", () => togglePasswordVisibility("password", "toggle-pw"));
 
-  // Real-time validation
+  // Password visibility toggle (Sign Up)
+  const suTogglePw = document.getElementById("su-toggle-pw");
+  if (suTogglePw) suTogglePw.addEventListener("click", () => togglePasswordVisibility("su-password", "su-toggle-pw"));
+
+  // Real-time validation — Sign In
   const emailInput = document.getElementById("email");
   if (emailInput) emailInput.addEventListener("blur", validateEmailField);
   if (emailInput) emailInput.addEventListener("input", clearError("email-error"));
-
   const pwInput = document.getElementById("password");
   if (pwInput) pwInput.addEventListener("input", clearError("password-error"));
+
+  // Real-time validation — Sign Up
+  const suName = document.getElementById("su-name");
+  if (suName) suName.addEventListener("input", clearError("su-name-error"));
+  const suEmail = document.getElementById("su-email");
+  if (suEmail) suEmail.addEventListener("blur", () => validateField("su-email", "su-email-error", "email"));
+  if (suEmail) suEmail.addEventListener("input", clearError("su-email-error"));
+  const suPassword = document.getElementById("su-password");
+  if (suPassword) suPassword.addEventListener("input", () => {
+    clearError("su-password-error")();
+    // Also re-validate confirm if it has a value
+    const confirm = document.getElementById("su-confirm");
+    if (confirm && confirm.value) validateField("su-confirm", "su-confirm-error", "confirm");
+  });
+  const suConfirm = document.getElementById("su-confirm");
+  if (suConfirm) suConfirm.addEventListener("input", clearError("su-confirm-error"));
 }
 
 function bindNavEvents() {
@@ -131,11 +154,11 @@ function switchAuthTab(which) {
 }
 
 // ---------------------------------------------------------------------
-// Password visibility
+// Password visibility — generic (works for both Sign In and Sign Up forms)
 // ---------------------------------------------------------------------
-function togglePasswordVisibility() {
-  const input = document.getElementById("password");
-  const btn = document.getElementById("toggle-pw");
+function togglePasswordVisibility(inputId, btnId) {
+  const input = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
   if (!input || !btn) return;
   if (input.type === "password") {
     input.type = "text";
@@ -159,34 +182,75 @@ function clearError(id) {
 }
 
 function validateEmailField() {
-  const email = document.getElementById("email").value.trim();
-  const errEl = document.getElementById("email-error");
-  if (!email) {
-    errEl.textContent = "Email is required";
-    return false;
-  }
-  // RFC 5322 simplified pattern
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!re.test(email)) {
-    errEl.textContent = "Enter a valid email address";
-    return false;
-  }
-  errEl.textContent = "";
-  return true;
+  return validateField("email", "email-error", "email");
 }
 
 function validatePasswordField() {
-  const pw = document.getElementById("password").value;
-  const errEl = document.getElementById("password-error");
-  if (!pw) {
-    errEl.textContent = "Password is required";
-    return false;
+  return validateField("password", "password-error", "password");
+}
+
+// Generic field validator
+function validateField(inputId, errorId, kind) {
+  const input = document.getElementById(inputId);
+  const errEl = document.getElementById(errorId);
+  if (!input || !errEl) return false;
+
+  const value = input.value.trim();
+
+  if (kind === "email") {
+    if (!value) {
+      errEl.textContent = "Email is required";
+      return false;
+    }
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!re.test(value)) {
+      errEl.textContent = "Enter a valid email address";
+      return false;
+    }
+    errEl.textContent = "";
+    return true;
   }
-  if (pw.length < 6) {
-    errEl.textContent = "Password must be at least 6 characters";
-    return false;
+
+  if (kind === "password") {
+    if (!value) {
+      errEl.textContent = "Password is required";
+      return false;
+    }
+    if (value.length < 6) {
+      errEl.textContent = "Password must be at least 6 characters";
+      return false;
+    }
+    errEl.textContent = "";
+    return true;
   }
-  errEl.textContent = "";
+
+  if (kind === "name") {
+    if (!value) {
+      errEl.textContent = "Name is required";
+      return false;
+    }
+    if (value.length < 2) {
+      errEl.textContent = "Name must be at least 2 characters";
+      return false;
+    }
+    errEl.textContent = "";
+    return true;
+  }
+
+  if (kind === "confirm") {
+    const original = document.getElementById("su-password")?.value || document.getElementById("password")?.value || "";
+    if (!value) {
+      errEl.textContent = "Please confirm your password";
+      return false;
+    }
+    if (value !== original) {
+      errEl.textContent = "Passwords do not match";
+      return false;
+    }
+    errEl.textContent = "";
+    return true;
+  }
+
   return true;
 }
 
@@ -251,9 +315,80 @@ async function handleLogin(e) {
 async function handleGoogleLogin() {
   // Opens the web OAuth flow in a new tab; the web app posts the token back via chrome.runtime
   await chrome.tabs.create({
-    url: "https://socialpilot.io/login?from=extension&provider=google",
+    url: `${API_BASE.replace(/\/api$/, "")}/login?from=extension&provider=google`,
   });
   showToast("Complete Google sign-in in the new tab", "info");
+}
+
+// ---------------------------------------------------------------------
+// Sign Up handler — creates a real user in the database via /api/auth/register
+// ---------------------------------------------------------------------
+async function handleSignup(e) {
+  e.preventDefault();
+
+  // Validate all fields
+  const nameOk = validateField("su-name", "su-name-error", "name");
+  const emailOk = validateField("su-email", "su-email-error", "email");
+  const pwOk = validateField("su-password", "su-password-error", "password");
+  const confirmOk = validateField("su-confirm", "su-confirm-error", "confirm");
+
+  const termsCheck = document.getElementById("su-terms");
+  const termsError = document.getElementById("su-terms-error");
+  if (!termsCheck?.checked) {
+    if (termsError) termsError.textContent = "You must agree to the Terms to continue";
+    return;
+  }
+  if (termsError) termsError.textContent = "";
+
+  if (!nameOk || !emailOk || !pwOk || !confirmOk) return;
+
+  // Online check
+  if (!navigator.onLine) {
+    showToast("You're offline. Check your connection.", "error");
+    return;
+  }
+
+  const btn = document.getElementById("signup-btn");
+  const name = document.getElementById("su-name").value.trim();
+  const email = document.getElementById("su-email").value.trim();
+  const password = document.getElementById("su-password").value;
+
+  btn.disabled = true;
+  btn.textContent = "Creating account...";
+
+  try {
+    // Send registration to background SW (survives popup close)
+    const response = await sendMessage({
+      type: "AUTH_REGISTER",
+      name,
+      email,
+      password,
+    });
+
+    if (response?.ok === false) {
+      throw new Error(response.error || "Registration failed");
+    }
+
+    // Registration succeeded — the SW already stored the token + started sync.
+    // Now switch to the main app.
+    showMain();
+    await loadState();
+    renderSection("dashboard");
+    showToast(`Welcome, ${name.split(" ")[0]}! Your account is ready.`, "success");
+  } catch (err) {
+    const msg = String(err.message || err);
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      showToast("Can't reach server. Is the app running?", "error");
+    } else if (msg.includes("409") || msg.toLowerCase().includes("already exists")) {
+      document.getElementById("su-email-error").textContent = "An account with this email already exists";
+      showToast("Email already registered. Try signing in.", "error");
+    } else {
+      showToast(msg || "Registration failed.", "error");
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Create Account";
+  }
 }
 
 async function handleLogout() {

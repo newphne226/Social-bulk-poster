@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/api-auth";
 import { canUseAI } from "@/lib/permissions";
 
 export async function POST(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
   if (!canUseAI(auth.user.plan)) {

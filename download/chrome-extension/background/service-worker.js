@@ -1,23 +1,27 @@
 // =====================================================================
-// SocialPilot Chrome Extension — Background Service Worker (MV3, v2)
+// SocialPilot Chrome Extension — Background Service Worker (MV3, v3)
 // =====================================================================
-// v2 changes from v1:
-//   • AUTH_LOGIN now does the fetch itself (popup can close safely)
-//   • Added QUICK_SCHEDULE_PAGE message handler (was missing — bug #1)
-//   • Feature-detect chrome.action.openPopup (Chrome 127+ — bug #3)
-//   • Better error handling for chrome.scripting.executeScript
-//   • Token + refresh-token persistence respects "remember me"
-//   • All apiFetch errors carry status codes for popup to display
-//   • On token refresh failure, broadcast a FORCE_LOGOUT message
+// v3 changes from v2:
+//   • API_BASE is now loaded from chrome.storage.local (configurable
+//     via Options page). Default = http://localhost:3000/api
+//   • Added AUTH_REGISTER handler — creates a real user in the
+//     database via /api/auth/register. The popup's Sign Up form
+//     sends registration here so it survives popup close.
+//   • After registration, the user is auto-signed-in (token stored).
 // =====================================================================
 
-const API_BASE = "https://api.socialpilot.io/v1";
+import { getApiBase } from "../lib/config.js";
+
+let API_BASE = "http://localhost:3000/api";
 const SYNC_ALARM = "socialpilot-sync";
 const HEARTBEAT_ALARM = "socialpilot-heartbeat";
 const TOKEN_REFRESH_ALARM = "socialpilot-token-refresh";
 
 // ----- Lifecycle -----
 chrome.runtime.onInstalled.addListener(async (details) => {
+  // Load the API base URL from storage (options page may override it)
+  API_BASE = await getApiBase();
+  console.log("[SocialPilot] API base:", API_BASE);
   console.log("[SocialPilot] Installed", details);
 
   // Schedule recurring alarms (MV3 minimum is 30 sec for normal extensions; 1 min for nightly)
@@ -41,15 +45,16 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     console.warn("[SocialPilot] contextMenus error", e);
   }
 
-  // Open onboarding on first install — direct to website registration (spec-compliant:
-  // extension never allows registration itself, but may direct users to the website)
+  // On first install, open a welcome tab. The user can sign up directly
+  // in the extension popup — no website redirect needed.
   if (details.reason === "install") {
-    await chrome.tabs.create({ url: "https://socialpilot.io/register?from=extension" });
+    await chrome.tabs.create({ url: "https://socialpilot.io/welcome?from=extension" });
   }
 });
 
-chrome.runtime.onStartup.addListener(() => {
-  console.log("[SocialPilot] Browser started — resuming sync");
+chrome.runtime.onStartup.addListener(async () => {
+  API_BASE = await getApiBase();
+  console.log("[SocialPilot] Browser started — resuming sync. API base:", API_BASE);
   chrome.alarms.create(SYNC_ALARM, { periodInMinutes: 5 });
   chrome.alarms.create(HEARTBEAT_ALARM, { periodInMinutes: 1 });
   chrome.alarms.create(TOKEN_REFRESH_ALARM, { periodInMinutes: 30 });
@@ -176,6 +181,41 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             await setToken(data.token, remember !== false);
             await chrome.storage.local.set({ user: data.user });
             // Fire-and-forget initial sync (don't block login response)
+            syncData(data.token).catch((e) => console.warn("[SocialPilot] initial sync failed", e));
+            sendResponse({ ok: true, user: data.user });
+          } catch (e) {
+            sendResponse({ ok: false, error: String(e.message || e) });
+          }
+          return;
+        }
+
+        case "AUTH_REGISTER": {
+          // The popup delegates registration to the SW so the popup can close mid-fetch.
+          // This creates a REAL user in the database via /api/auth/register.
+          const { name, email, password } = message;
+          if (!name || !email || !password) {
+            sendResponse({ ok: false, error: "Name, email, and password are required" });
+            return;
+          }
+          try {
+            const res = await fetch(`${API_BASE}/auth/register`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name, email, password, remember: true }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              sendResponse({
+                ok: false,
+                error: data?.error || `Registration failed (${res.status})`,
+                status: res.status,
+              });
+              return;
+            }
+            // Registration succeeded — store token + user, just like login
+            await setToken(data.token, true);
+            await chrome.storage.local.set({ user: data.user, subscription: data.subscription });
+            // Fire-and-forget initial sync
             syncData(data.token).catch((e) => console.warn("[SocialPilot] initial sync failed", e));
             sendResponse({ ok: true, user: data.user });
           } catch (e) {

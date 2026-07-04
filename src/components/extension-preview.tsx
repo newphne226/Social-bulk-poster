@@ -391,6 +391,14 @@ function LoginSection({ onLogin }: { onLogin: () => void }) {
   const [remember, setRemember] = React.useState(true);
   const [error, setError] = React.useState("");
 
+  // Sign Up form state
+  const [suName, setSuName] = React.useState("");
+  const [suEmail, setSuEmail] = React.useState("");
+  const [suPassword, setSuPassword] = React.useState("");
+  const [suConfirm, setSuConfirm] = React.useState("");
+  const [suTerms, setSuTerms] = React.useState(false);
+  const [suError, setSuError] = React.useState("");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -414,6 +422,39 @@ function LoginSection({ onLogin }: { onLogin: () => void }) {
     }, 550);
   };
 
+  const handleSignup = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSuError("");
+
+    if (suName.trim().length < 2) {
+      setSuError("Name must be at least 2 characters");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(suEmail)) {
+      setSuError("Please enter a valid email address");
+      return;
+    }
+    if (suPassword.length < 6) {
+      setSuError("Password must be at least 6 characters");
+      return;
+    }
+    if (suPassword !== suConfirm) {
+      setSuError("Passwords do not match");
+      return;
+    }
+    if (!suTerms) {
+      setSuError("You must agree to the Terms to continue");
+      return;
+    }
+
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      onLogin();
+      toast.success(`Welcome, ${suName.split(" ")[0]}! Your account is ready.`);
+    }, 800);
+  };
+
   return (
     <ScrollArea className="h-full">
       <div className="flex flex-col gap-3 p-5">
@@ -432,7 +473,7 @@ function LoginSection({ onLogin }: { onLogin: () => void }) {
         <div className="flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-900">
           <button
             type="button"
-            onClick={() => { setAuthTab("signin"); setError(""); }}
+            onClick={() => { setAuthTab("signin"); setError(""); setSuError(""); }}
             className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors ${
               authTab === "signin"
                 ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white"
@@ -443,7 +484,7 @@ function LoginSection({ onLogin }: { onLogin: () => void }) {
           </button>
           <button
             type="button"
-            onClick={() => { setAuthTab("signup"); setError(""); }}
+            onClick={() => { setAuthTab("signup"); setError(""); setSuError(""); }}
             className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors ${
               authTab === "signup"
                 ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white"
@@ -549,32 +590,102 @@ function LoginSection({ onLogin }: { onLogin: () => void }) {
             </p>
           </>
         ) : (
-          /* Sign Up panel — explains that registration is on website only */
-          <div className="space-y-3 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-pink-500 text-white">
-              <UserPlus className="h-6 w-6" />
-            </div>
-            <div>
+          /* Sign Up panel — full registration form, creates account in the database */
+          <form onSubmit={handleSignup} className="space-y-2.5">
+            <div className="text-center mb-1">
               <h3 className="text-sm font-semibold">Create your account</h3>
-              <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                For security reasons, account registration is only available on our website.
-                Click below to sign up — it takes less than a minute.
+              <p className="mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-400">
+                Your account is created in our database — no redirect needed.
               </p>
             </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="su-name" className="text-[11px]">Full name</Label>
+              <div className="relative">
+                <UserPlus className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                <Input
+                  id="su-name" type="text" value={suName}
+                  onChange={(e) => setSuName(e.target.value)}
+                  className="h-9 pl-8 text-xs"
+                  placeholder="Jane Doe" required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="su-email" className="text-[11px]">Email</Label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                <Input
+                  id="su-email" type="email" value={suEmail}
+                  onChange={(e) => setSuEmail(e.target.value)}
+                  className="h-9 pl-8 text-xs"
+                  placeholder="you@example.com" required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="su-pw" className="text-[11px]">Password</Label>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                <Input
+                  id="su-pw" type={showPw ? "text" : "password"} value={suPassword}
+                  onChange={(e) => setSuPassword(e.target.value)}
+                  className="h-9 pl-8 pr-8 text-xs"
+                  placeholder="At least 6 characters" required
+                />
+                <button
+                  type="button" onClick={() => setShowPw((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                  aria-label={showPw ? "Hide password" : "Show password"}
+                >
+                  {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="su-confirm" className="text-[11px]">Confirm password</Label>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                <Input
+                  id="su-confirm" type={showPw ? "text" : "password"} value={suConfirm}
+                  onChange={(e) => setSuConfirm(e.target.value)}
+                  className="h-9 pl-8 text-xs"
+                  placeholder="Re-enter your password" required
+                />
+              </div>
+            </div>
+
+            <label className="flex items-start gap-1.5 cursor-pointer text-[10px] text-zinc-500 dark:text-zinc-400">
+              <input
+                type="checkbox" checked={suTerms}
+                onChange={(e) => setSuTerms(e.target.checked)}
+                className="h-3 w-3 cursor-pointer mt-0.5"
+              />
+              <span>
+                I agree to the{" "}
+                <a href="https://socialpilot.io/terms" target="_blank" rel="noreferrer" className="text-amber-600 hover:underline dark:text-amber-400">Terms</a>
+                {" "}and{" "}
+                <a href="https://socialpilot.io/privacy" target="_blank" rel="noreferrer" className="text-amber-600 hover:underline dark:text-amber-400">Privacy Policy</a>
+              </span>
+            </label>
+
+            {suError && (
+              <div className="rounded-md bg-red-500/10 px-2.5 py-1.5 text-[10px] text-red-600 dark:text-red-400">
+                {suError}
+              </div>
+            )}
+
             <Button
-              type="button"
-              onClick={() => toast.success("Opening socialpilot.io/register in a new tab")}
+              type="submit" disabled={loading}
               className="h-9 w-full bg-gradient-to-r from-amber-500 to-pink-500 text-white hover:from-amber-600 hover:to-pink-600"
             >
-              Create Account
-              <ExternalLink className="h-3 w-3 ml-1.5" />
+              {loading ? "Creating account…" : "Create Account"}
+              {!loading && <ArrowRight className="h-3.5 w-3.5" />}
             </Button>
-            <ul className="space-y-1 text-left text-[11px] text-zinc-500 dark:text-zinc-400">
-              <li className="flex items-start gap-1.5"><Check className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" /> Free plan forever — no credit card required</li>
-              <li className="flex items-start gap-1.5"><Check className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" /> Schedule across 5 social platforms</li>
-              <li className="flex items-start gap-1.5"><Check className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" /> AI captions, hashtags & emoji</li>
-              <li className="flex items-start gap-1.5"><Check className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" /> Cancel anytime</li>
-            </ul>
+
             <p className="text-center text-[11px] text-zinc-500 dark:text-zinc-400">
               Already have an account?{" "}
               <button
@@ -585,11 +696,11 @@ function LoginSection({ onLogin }: { onLogin: () => void }) {
                 Sign In
               </button>
             </p>
-          </div>
+          </form>
         )}
 
         <p className="text-center text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">
-          🔒 The extension only supports Sign In. Registration happens on the website.
+          🔒 Your account is created securely in our database. We never share your data.
         </p>
       </div>
     </ScrollArea>

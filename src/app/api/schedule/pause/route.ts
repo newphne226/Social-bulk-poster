@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/api-auth";
 let SCHEDULE_PAUSED = false;
 
 export async function POST(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
   const body = await request.json().catch(() => ({}));

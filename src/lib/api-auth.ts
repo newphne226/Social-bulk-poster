@@ -1,18 +1,14 @@
 // =====================================================================
 // API auth helpers — shared across all route handlers
-// Demo mode: any non-empty Bearer token is accepted.
-// Admin: requires x-admin-token header to equal ADMIN_SECRET below,
-//        OR the bearer-token user email matches ADMIN_EMAIL.
+// Verifies the Bearer token against the in-memory token store AND
+// loads the real user from the Prisma database.
 // =====================================================================
 
 import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
-// Demo "secret" admin token. In production this would be a real secret.
 const ADMIN_SECRET_TOKEN = "admin-secret-token";
-const ADMIN_EMAIL = "alex@socialpilot.io";
 
-// Mirror of the Prisma `PlanTier` enum so this helper doesn't pull in
-// @prisma/client (whose generated client is out-of-date in this demo).
 export type PlanTier = "FREE" | "SILVER" | "VIP_PRO" | "ENTERPRISE";
 
 export interface AuthUser {
@@ -20,27 +16,19 @@ export interface AuthUser {
   email: string;
   name: string;
   plan: PlanTier;
-  role: "USER" | "ADMIN";
+  role: "USER" | "ADMIN" | "OWNER";
 }
 
 export type AuthResult =
   | { ok: true; user: AuthUser }
   | { ok: false; response: NextResponse };
 
-// Demo user returned for any valid (non-empty) bearer token.
-const DEMO_USER: AuthUser = {
-  id: "u_001",
-  email: "alex@socialpilot.io",
-  name: "Alex Morgan",
-  plan: "VIP_PRO",
-  role: "ADMIN",
-};
-
 /**
- * Reads the Authorization header and returns the demo user when a
- * non-empty Bearer token is present. Returns 401 otherwise.
+ * Reads the Authorization header, looks up the token in the activeTokens
+ * store, and loads the matching user from the database. Returns 401 if the
+ * token is missing, expired, or doesn't map to a user.
  */
-export function requireAuth(request: NextRequest): AuthResult {
+export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   const header = request.headers.get("authorization") ?? "";
   const match = header.match(/^Bearer\s+(.+)$/i);
   if (!match || !match[1].trim()) {
@@ -52,23 +40,103 @@ export function requireAuth(request: NextRequest): AuthResult {
       ),
     };
   }
-  return { ok: true, user: DEMO_USER };
+
+  const token = match[1].trim();
+
+  // Import the token store dynamically to avoid circular imports
+  const { activeTokens } = await import("@/app/api/auth/register/route");
+  const session = activeTokens.get(token);
+
+  if (!session) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Unauthorized — invalid or expired token." },
+        { status: 401 }
+      ),
+    };
+  }
+
+  if (session.expiresAt < Date.now()) {
+    activeTokens.delete(token);
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Unauthorized — session expired. Please sign in again." },
+        { status: 401 }
+      ),
+    };
+  }
+
+  try {
+    const dbUser = await db.user.findUnique({
+      where: { id: session.userId },
+      include: {
+        subscription: {
+          include: { plan: true },
+        },
+      },
+    });
+
+    if (!dbUser || dbUser.deletedAt) {
+      activeTokens.delete(token);
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { error: "Unauthorized — user not found." },
+          { status: 401 }
+        ),
+      };
+    }
+
+    if (dbUser.status === "BANNED" || dbUser.status === "SUSPENDED") {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { error: `Account is ${dbUser.status.toLowerCase()}.` },
+          { status: 403 }
+        ),
+      };
+    }
+
+    const plan = (dbUser.subscription?.plan?.tier as PlanTier) ?? "FREE";
+
+    return {
+      ok: true,
+      user: {
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name ?? dbUser.email,
+        plan,
+        role: dbUser.role,
+      },
+    };
+  } catch (err) {
+    console.error("[requireAuth] DB error", err);
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Auth lookup failed." },
+        { status: 500 }
+      ),
+    };
+  }
 }
 
 /**
  * Same as requireAuth, but additionally gates on admin access:
  *  - `x-admin-token` header equal to ADMIN_SECRET_TOKEN, OR
- *  - the demo user's email equals ADMIN_EMAIL (already true in demo).
+ *  - the user's role is ADMIN or OWNER.
  */
-export function requireAdmin(request: NextRequest): AuthResult {
-  const auth = requireAuth(request);
+export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
+  const auth = await requireAuth(request);
   if (!auth.ok) return auth;
 
   const adminToken = request.headers.get("x-admin-token");
   const isAdminByToken = adminToken === ADMIN_SECRET_TOKEN;
-  const isAdminByEmail = auth.user.email === ADMIN_EMAIL;
+  const isAdminByRole = auth.user.role === "ADMIN" || auth.user.role === "OWNER";
 
-  if (!isAdminByToken && !isAdminByEmail) {
+  if (!isAdminByToken && !isAdminByRole) {
     return {
       ok: false,
       response: NextResponse.json(

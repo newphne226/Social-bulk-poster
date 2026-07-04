@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { ADMIN_LOGS } from "@/lib/admin-mock";
 
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);

@@ -13,7 +13,7 @@ const EMOJI_MAP: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
   if (!canUseAI(auth.user.plan)) {
