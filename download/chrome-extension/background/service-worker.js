@@ -349,7 +349,7 @@ async function getToken() {
 }
 
 async function setToken(token, remember = true) {
-  const payload: any = { token, tokenIssuedAt: Date.now() };
+  const payload = { token, tokenIssuedAt: Date.now() };
   // Store a client-side expiry so we can proactively refresh.
   // Default: 24h. Remember me: 30 days. We refresh 5 min before expiry.
   const lifetimeMs = remember ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
@@ -370,7 +370,7 @@ async function maybeRefreshToken() {
 }
 
 async function apiFetch(path, method = "GET", body = null, token = null) {
-  const headers: any = { "Content-Type": "application/json" };
+  const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   let res;
@@ -424,7 +424,7 @@ async function syncData(token) {
     });
     // Push Chrome notifications for unread items
     const { lastSeenNotificationId } = await chrome.storage.local.get("lastSeenNotificationId");
-    const fresh = (data.notifications || []).filter((n: any) => !n.isRead && n.id !== lastSeenNotificationId);
+    const fresh = (data.notifications || []).filter((n) => !n.isRead && n.id !== lastSeenNotificationId);
     const iconUrl = chrome.runtime.getURL("icons/icon-128.png");  // Bug #8 fix
     for (const n of fresh.slice(0, 3)) {
       try {
@@ -440,7 +440,7 @@ async function syncData(token) {
       }
       await chrome.storage.local.set({ lastSeenNotificationId: n.id });
     }
-    const unread = (data.notifications || []).filter((n: any) => !n.isRead).length;
+    const unread = (data.notifications || []).filter((n) => !n.isRead).length;
     try {
       await chrome.action.setBadgeText({ text: unread > 0 ? String(unread > 99 ? "99+" : unread) : "" });
       await chrome.action.setBadgeBackgroundColor({ color: "#f59e0b" });
@@ -474,7 +474,7 @@ async function heartbeat(token) {
           });
         } catch {}
       }
-      const unread = merged.filter((n: any) => !n.isRead).length;
+      const unread = merged.filter((n) => !n.isRead).length;
       try {
         await chrome.action.setBadgeText({ text: unread > 0 ? String(unread > 99 ? "99+" : unread) : "" });
       } catch {}

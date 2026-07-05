@@ -170,6 +170,35 @@ requiredPerms.forEach((p) => {
 check("host_permissions includes api.socialpilot.io",
   (manifest.host_permissions || []).some(h => h.includes("socialpilot.io")));
 
+// 9. TypeScript syntax check (CRITICAL — TS annotations break Chrome extension JS files)
+console.log("\n9. TypeScript syntax check (CRITICAL)");
+const jsFiles = [
+  "popup/popup.js",
+  "background/service-worker.js",
+  "content/content.js",
+  "options/options.js",
+  "lib/config.js",
+];
+jsFiles.forEach((relPath) => {
+  const fullPath = path.join(EXT_DIR, relPath);
+  if (!fs.existsSync(fullPath)) return;
+  const content = fs.readFileSync(fullPath, "utf8");
+  // Remove comment lines before checking (comments can mention TS syntax)
+  const codeOnly = content.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const tsPattern = /:\s*(any|string|number|boolean|void|Promise|Record|Map|Array)\b/;
+  const hasTs = tsPattern.test(codeOnly);
+  check(`${relPath} has no TypeScript type annotations`, !hasTs,
+    hasTs ? "TS annotations cause SyntaxError in Chrome" : "");
+  // Also verify with Node's syntax checker
+  try {
+    const { execSync } = require("child_process");
+    execSync(`node --check "${fullPath}"`, { stdio: "pipe" });
+    check(`${relPath} passes Node syntax check`, true);
+  } catch (e) {
+    check(`${relPath} passes Node syntax check`, false, e.stderr?.toString() || e.message);
+  }
+});
+
 // 9. Summary
 console.log("\n=== Summary ===");
 console.log(`Errors: ${errors.length}`);
