@@ -1,0 +1,77 @@
+{
+  "extName": {
+    "message": "SocialPilot — Social Media Scheduler",
+    "description": "Extension name shown in the Chrome toolbar and extensions page."
+  },
+  "extDescription": {
+    "message": "Schedule and publish social media posts across Facebook, Instagram, X, LinkedIn, and Pinterest from any webpage.",
+    "description": "Short description shown under the extension name on chrome://extensions and the Web Store listing."
+  },
+  "actionTitle": {
+    "message": "SocialPilot",
+    "description": "Tooltip shown when hovering the toolbar icon."
+  },
+  "commandOpenPopup": {
+    "message": "Open SocialPilot popup",
+    "description": "Description of the keyboard shortcut to open the popup."
+  },
+  "commandQuickSchedule": {
+    "message": "Quick-schedule current page as a post",
+    "description": "Description of the keyboard shortcut to schedule the active tab."
+  },
+  "ctxSchedulePage": {
+    "message": "Schedule this page with SocialPilot",
+    "description": "Right-click menu item for the whole page."
+  },
+  "ctxScheduleSelection": {
+    "message": "Schedule selection with SocialPilot",
+    "description": "Right-click menu item for selected text."
+  },
+  "ctxScheduleImage": {
+    "message": "Schedule this image with SocialPilot",
+    "description": "Right-click menu item for images."
+  },
+  "ctxScheduleLink": {
+    "message": "Schedule this link with SocialPilot",
+    "description": "Right-click menu item for links."
+  },
+  "loginTitle": {
+    "message": "SocialPilot",
+    "description": "Brand title shown on the login screen."
+  },
+  "loginSubtitle": {
+    "message": "Schedule across 5 platforms in seconds",
+    "description": "Subtitle on the login screen."
+  },
+  "loginEmailLabel": {
+    "message": "Email"
+  },
+  "loginPasswordLabel": {
+    "message": "Password"
+  },
+  "loginButton": {
+    "message": "Log In"
+  },
+  "loginGoogleButton": {
+    "message": "Continue with Google"
+  },
+  "loginNoAccount": {
+    "message": "Don't have an account?"
+  },
+  "loginRegisterLink": {
+    "message": "Register on socialpilot.io →"
+  },
+  "loginSecurityNote": {
+    "message": "🔒 The extension only supports login. Registration is on the website."
+  },
+  "navDashboard": { "message": "Dashboard" },
+  "navQuick": { "message": "Quick Schedule" },
+  "navCreate": { "message": "Create Post" },
+  "navDrafts": { "message": "Drafts" },
+  "navMedia": { "message": "Media" },
+  "navQueue": { "message": "Schedule Queue" },
+  "navNotifications": { "message": "Notifications" },
+  "navOpenWeb": { "message": "Open Web Dashboard" },
+  "navSettings": { "message": "Settings" },
+  "navLogout": { "message": "Logout" }
+}

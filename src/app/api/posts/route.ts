@@ -7,27 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { canSchedulePost } from "@/lib/permissions";
-
-const now = Date.now();
-const iso = (offsetMin: number) => new Date(now + offsetMin * 60000).toISOString();
-
-// Inline mock dataset (server-only).
-const POSTS: any[] = [
-  { id: "p1", caption: "🚀 Big announcement! Our summer sale starts this Friday.", platform: "facebook", accountUsername: "@acmecorp", accountId: "a1", status: "SCHEDULED", type: "IMAGE", scheduledAt: iso(45), publishedAt: null, mediaUrls: ["https://picsum.photos/seed/p1/800/600"], hashtags: ["SummerSale"], retryCount: 0 },
-  { id: "p2", caption: "Behind the scenes of our new product photoshoot 📸", platform: "instagram", accountUsername: "@acme.lifestyle", accountId: "a3", status: "PUBLISHED", type: "IMAGE", scheduledAt: iso(-120), publishedAt: iso(-118), mediaUrls: [], hashtags: ["BTS"], retryCount: 0 },
-  { id: "p3", caption: "5 productivity tips every founder should know 🧵", platform: "x", accountUsername: "@acme", accountId: "a5", status: "PUBLISHED", type: "TEXT", scheduledAt: iso(-240), publishedAt: iso(-239), mediaUrls: [], hashtags: ["productivity"], retryCount: 0 },
-  { id: "p4", caption: "We're hiring a Senior Product Designer!", platform: "linkedin", accountUsername: "acme-inc", accountId: "a6", status: "FAILED", type: "IMAGE", scheduledAt: iso(-360), publishedAt: null, mediaUrls: [], hashtags: ["hiring"], failureReason: "Token expired. Please reconnect the account.", retryCount: 2 },
-  { id: "p5", caption: "New blog post: The Future of Social Media Automation in 2026", platform: "facebook", accountUsername: "@acmecorp", accountId: "a1", status: "DRAFT", type: "LINK", scheduledAt: null, publishedAt: null, mediaUrls: [], hashtags: ["blog"], retryCount: 0 },
-  { id: "p6", caption: "Weekend vibes ☀️ Tag someone who needs this view!", platform: "instagram", accountUsername: "@acme.lifestyle", accountId: "a3", status: "QUEUED", type: "IMAGE", scheduledAt: iso(180), publishedAt: null, mediaUrls: [], hashtags: ["weekend"], retryCount: 0 },
-];
-
-// Mock account→platform mapping (for multi-account create)
-const ACCOUNT_MAP: Record<string, { platform: string; username: string }> = {
-  a1: { platform: "facebook", username: "@acmecorp" },
-  a3: { platform: "instagram", username: "@acme.lifestyle" },
-  a5: { platform: "x", username: "@acme" },
-  a6: { platform: "linkedin", username: "acme-inc" },
-};
+import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
@@ -38,12 +18,34 @@ export async function GET(request: NextRequest) {
   const platform = searchParams.get("platform");
   const accountId = searchParams.get("accountId");
 
-  let result = POSTS;
-  if (status) result = result.filter((p) => p.status === status.toUpperCase());
-  if (platform) result = result.filter((p) => p.platform === platform);
-  if (accountId) result = result.filter((p) => p.accountId === accountId);
+  const where: any = { userId: auth.user.id };
+  if (status) where.status = status.toUpperCase();
+  if (platform) where.platform = platform;
+  if (accountId) where.accountId = accountId;
 
-  return NextResponse.json({ posts: result, total: result.length });
+  const posts = await db.post.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    include: { account: true },
+  });
+
+  const formattedPosts = posts.map((post) => ({
+    id: post.id,
+    caption: post.caption,
+    platform: post.platform,
+    accountUsername: post.account?.username ?? "",
+    accountId: post.accountId,
+    status: post.status,
+    type: post.type,
+    scheduledAt: post.scheduledAt?.toISOString() ?? null,
+    publishedAt: post.publishedAt?.toISOString() ?? null,
+    mediaUrls: JSON.parse(post.mediaUrls || "[]"),
+    hashtags: JSON.parse(post.hashtags || "[]"),
+    retryCount: post.retryCount,
+  }));
+
+  return NextResponse.json({ posts: formattedPosts, total: formattedPosts.length });
 }
 
 export async function POST(request: NextRequest) {
@@ -79,8 +81,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Verify accounts belong to user
+  if (targetAccountIds.length > 0) {
+    const accounts = await db.socialAccount.findMany({
+      where: { id: { in: targetAccountIds }, userId: auth.user.id },
+      select: { id: true },
+    });
+    if (accounts.length !== targetAccountIds.length) {
+      return NextResponse.json({ error: "One or more accounts not found or unauthorized." }, { status: 403 });
+    }
+  }
+
   // Enforce scheduled-post limit based on plan tier.
-  const scheduledCount = POSTS.filter((p) => p.status === "SCHEDULED" || p.status === "QUEUED").length;
+  const scheduledCount = await db.post.count({
+    where: { userId: auth.user.id, status: { in: ["SCHEDULED", "QUEUED"] } },
+  });
   const check = canSchedulePost(auth.user.plan, scheduledCount);
   if (!check.allowed) {
     return NextResponse.json({ error: check.reason }, { status: 403 });
@@ -91,26 +106,48 @@ export async function POST(request: NextRequest) {
   const accountsToProcess = targetAccountIds.length > 0 ? targetAccountIds : [null];
 
   for (const acctId of accountsToProcess) {
-    const acctInfo = acctId ? ACCOUNT_MAP[acctId] : null;
-    const postPlatform = platform || acctInfo?.platform || "facebook";
-    const postUsername = acctInfo?.username || "@newaccount";
+    let postPlatform = platform || "facebook";
+    let postUsername = "@newaccount";
 
-    const newPost: any = {
-      id: `p${Date.now()}${createdPosts.length > 0 ? `_${createdPosts.length}` : ""}`,
-      caption,
-      platform: postPlatform,
-      accountId: acctId || null,
+    if (acctId) {
+      const account = await db.socialAccount.findUnique({
+        where: { id: acctId },
+        select: { platform: true, username: true },
+      });
+      if (account) {
+        postPlatform = account.platform;
+        postUsername = account.username || "@newaccount";
+      }
+    }
+
+    const newPost = await db.post.create({
+      data: {
+        userId: auth.user.id,
+        accountId: acctId,
+        caption,
+        platform: postPlatform,
+        type: type ?? "TEXT",
+        status: status || (scheduledAt ? "SCHEDULED" : "DRAFT"),
+        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+        mediaUrls: JSON.stringify(mediaUrls ?? []),
+        hashtags: JSON.stringify(hashtags ?? []),
+      },
+    });
+
+    createdPosts.push({
+      id: newPost.id,
+      caption: newPost.caption,
+      platform: newPost.platform,
       accountUsername: postUsername,
-      status: status || (scheduledAt ? "SCHEDULED" : "DRAFT"),
-      type: type ?? "TEXT",
-      scheduledAt: scheduledAt ?? null,
+      accountId: newPost.accountId,
+      status: newPost.status,
+      type: newPost.type,
+      scheduledAt: newPost.scheduledAt?.toISOString() ?? null,
       publishedAt: null,
       mediaUrls: mediaUrls ?? [],
       hashtags: hashtags ?? [],
       retryCount: 0,
-    };
-    POSTS.push(newPost);
-    createdPosts.push(newPost);
+    });
   }
 
   // If only one post was created, return it directly for backward compat

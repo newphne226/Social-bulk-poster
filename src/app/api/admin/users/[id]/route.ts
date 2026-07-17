@@ -1,9 +1,8 @@
 // PUT /api/admin/users/[id] — update user (suspend / ban / delete / restore).
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { ADMIN_USERS, type AdminUserRow } from "@/lib/admin-mock";
+import { db } from "@/lib/db";
 
-// Mutate in-place (demo only — no persistence).
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -12,14 +11,10 @@ export async function PUT(
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
-  const idx = ADMIN_USERS.findIndex((u) => u.id === id);
-  if (idx === -1) {
-    return NextResponse.json({ error: "User not found." }, { status: 404 });
-  }
-
   const body = await request.json().catch(() => ({}));
   const { action } = body ?? {};
-  const validActions: AdminUserRow["status"][] = ["ACTIVE", "SUSPENDED", "BANNED", "DELETED"];
+
+  const validActions = ["ACTIVE", "SUSPENDED", "BANNED", "DELETED"];
   if (!action || !validActions.includes(action)) {
     return NextResponse.json(
       { error: `action must be one of: ${validActions.join(", ")}.` },
@@ -35,9 +30,30 @@ export async function PUT(
     );
   }
 
-  ADMIN_USERS[idx].status = action;
+  const user = await db.user.findUnique({ where: { id } });
+  if (!user) {
+    return NextResponse.json({ error: "User not found." }, { status: 404 });
+  }
+
+  const updated = await db.user.update({
+    where: { id },
+    data: {
+      status: action,
+      ...(action === "DELETED" ? { deletedAt: new Date() } : {}),
+      ...(action === "SUSPENDED" ? { suspendedAt: new Date() } : {}),
+      ...(action === "BANNED" ? { bannedAt: new Date() } : {}),
+    },
+  });
+
   return NextResponse.json({
-    user: ADMIN_USERS[idx],
+    user: {
+      id: updated.id,
+      name: updated.name,
+      email: updated.email,
+      status: updated.status,
+      plan: updated.subscription?.plan?.tier ?? "FREE",
+      createdAt: updated.createdAt.toISOString(),
+    },
     message: `User status updated to ${action}.`,
   });
 }

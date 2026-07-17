@@ -1,0 +1,9 @@
+/* SocialPilot content script styles */
+#socialpilot-quick-btn,
+#socialpilot-img-overlay {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+#socialpilot-quick-btn * {
+  pointer-events: none;
+}

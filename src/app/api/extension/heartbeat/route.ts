@@ -2,16 +2,7 @@
 // Returns 200 + any new notifications since the last heartbeat.
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
-
-// Track the last heartbeat timestamp per device (demo only).
-const lastHeartbeat: Record<string, string> = {};
-
-// Static pool of mock notifications to "discover" on heartbeats.
-const ALL_NOTIFICATIONS = [
-  { id: "n1", type: "POST_FAILED", title: "Post failed to publish", body: "LinkedIn post failed: token expired.", isRead: false, createdAt: "2026-07-03T08:00:00Z" },
-  { id: "n2", type: "POST_PUBLISHED", title: "Post published", body: "Your X post is now live.", isRead: false, createdAt: "2026-07-03T07:00:00Z" },
-  { id: "n3", type: "ACCOUNT_DISCONNECTED", title: "Account disconnected", body: "Pinterest account needs reconnection.", isRead: false, createdAt: "2026-07-03T05:00:00Z" },
-];
+import { db } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request);
@@ -19,20 +10,57 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const deviceId = body?.deviceId ?? "unknown-device";
-  const lastSeen = lastHeartbeat[deviceId];
-  const now = new Date().toISOString();
-  lastHeartbeat[deviceId] = now;
 
-  // Return notifications created after the last heartbeat (or all if first call).
-  const newNotifications = lastSeen
-    ? ALL_NOTIFICATIONS.filter((n) => n.createdAt > lastSeen)
-    : ALL_NOTIFICATIONS;
+  try {
+    // Get or create device record
+    let device = await db.device.findUnique({
+      where: { id: deviceId },
+    });
 
-  return NextResponse.json({
-    ok: true,
-    deviceId,
-    serverTime: now,
-    newNotifications,
-    nextHeartbeatInMs: 30000,
-  });
+    if (!device) {
+      device = await db.device.create({
+        data: {
+          id: deviceId,
+          userId: auth.user.id,
+          deviceName: "Extension",
+          deviceType: "extension",
+          lastActiveAt: new Date(),
+        },
+      });
+    } else {
+      await db.device.update({
+        where: { id: deviceId },
+        data: { lastActiveAt: new Date() },
+      });
+    }
+
+    // Get notifications created after device's lastActiveAt (before update)
+    const lastSeen = device.lastActiveAt;
+    const newNotifications = await db.notification.findMany({
+      where: {
+        userId: auth.user.id,
+        createdAt: { gt: lastSeen },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      deviceId,
+      serverTime: new Date().toISOString(),
+      newNotifications: newNotifications.map((n) => ({
+        id: n.id,
+        type: n.type,
+        title: n.title,
+        body: n.body,
+        isRead: n.isRead,
+        createdAt: n.createdAt.toISOString(),
+      })),
+      nextHeartbeatInMs: 30000,
+    });
+  } catch (err) {
+    console.error("[extension/heartbeat] error", err);
+    return NextResponse.json({ error: "Heartbeat failed" }, { status: 500 });
+  }
 }

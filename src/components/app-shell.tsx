@@ -47,9 +47,6 @@ export function AppShell({ view, onViewChange, children }: AppShellProps) {
               <Sparkles className="h-4 w-4" />
             </div>
             <div className="font-semibold tracking-tight">SocialPilot</div>
-            <span className="hidden md:inline ml-2 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-              Live Demo
-            </span>
           </div>
 
           <nav className="hidden md:flex items-center gap-1">

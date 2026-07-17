@@ -1,7 +1,7 @@
 // GET /api/admin/logs — query system logs (filter by level).
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { ADMIN_LOGS } from "@/lib/admin-mock";
+import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -12,19 +12,35 @@ export async function GET(request: NextRequest) {
   const source = searchParams.get("source")?.toLowerCase();
   const limitParam = searchParams.get("limit");
   const limit = limitParam ? parseInt(limitParam, 10) : 100;
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const skip = (page - 1) * limit;
 
-  let result = ADMIN_LOGS;
-  if (level) result = result.filter((l) => l.level === level);
-  if (source) result = result.filter((l) => l.source === source);
+  const where: any = {};
+  if (level) where.level = level;
+  if (source) where.source = source;
 
-  // Newest first.
-  result = [...result]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, limit);
+  const [logs, total] = await Promise.all([
+    db.systemLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    db.systemLog.count({ where }),
+  ]);
 
   return NextResponse.json({
-    logs: result,
-    total: result.length,
-    filters: { level, source, limit },
+    logs: logs.map((l) => ({
+      id: l.id,
+      level: l.level,
+      source: l.source,
+      message: l.message,
+      metadata: l.metadata ? JSON.parse(l.metadata) : {},
+      createdAt: l.createdAt.toISOString(),
+    })),
+    total,
+    page,
+    limit,
+    filters: { level, source },
   });
 }
