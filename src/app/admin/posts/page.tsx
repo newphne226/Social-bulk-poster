@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, Clock, CheckCircle, AlertCircle, FileText } from "lucide-react";
+import { Clock, CheckCircle, AlertCircle, FileText } from "lucide-react";
 
 interface Post {
   id: string;
@@ -45,12 +45,17 @@ export default function AdminPostsPage() {
   const [statusFilter, setStatusFilter] = React.useState("");
   const [platformFilter, setPlatformFilter] = React.useState("");
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
 
   React.useEffect(() => {
     const token = localStorage.getItem("sp_admin_token");
-    if (!token) return;
+    if (!token) {
+      window.location.replace("/admin/login");
+      return;
+    }
 
     setLoading(true);
+    setError("");
     const params = new URLSearchParams({ page: String(page), limit: "20" });
     if (statusFilter) params.set("status", statusFilter);
     if (platformFilter) params.set("platform", platformFilter);
@@ -58,19 +63,25 @@ export default function AdminPostsPage() {
     fetch(`/api/admin/posts?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.json())
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || "Failed to load");
+        return data;
+      })
       .then((data) => {
-        setPosts(data.posts);
-        setTotal(data.total);
-        setTotalPages(data.totalPages);
+        setPosts(data.posts ?? []);
+        setTotal(data.total ?? 0);
+        setTotalPages(data.totalPages ?? 1);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        setError(err.message || "Failed to load posts");
+        setLoading(false);
+      });
   }, [page, statusFilter, platformFilter]);
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <select
           value={statusFilter}
@@ -97,7 +108,13 @@ export default function AdminPostsPage() {
         </select>
       </div>
 
-      {/* Posts Table */}
+      {error && (
+        <div className="p-4 rounded-xl bg-red-900/20 border border-red-800 text-red-400 text-sm flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          {error}
+        </div>
+      )}
+
       <div className="bg-slate-800/50 rounded-2xl border border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -155,10 +172,9 @@ export default function AdminPostsPage() {
         </div>
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-400">
-          Showing {(page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total} posts
+          Showing {posts.length === 0 ? 0 : (page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total} posts
         </p>
         <div className="flex gap-2">
           <button

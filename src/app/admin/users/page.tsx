@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, Ban, CheckCircle, Trash2, Shield, UserMinus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search, Ban, CheckCircle, Shield, UserMinus, AlertCircle } from "lucide-react";
 
 interface User {
   id: string;
@@ -25,24 +24,35 @@ export default function AdminUsersPage() {
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
 
   const fetchUsers = React.useCallback(async () => {
     const token = localStorage.getItem("sp_admin_token");
-    if (!token) return;
+    if (!token) {
+      window.location.replace("/admin/login");
+      return;
+    }
 
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: "20" });
-    if (search) params.set("search", search);
-    if (statusFilter) params.set("status", statusFilter);
+    setError("");
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: "20" });
+      if (search) params.set("search", search);
+      if (statusFilter) params.set("status", statusFilter);
 
-    const res = await fetch(`/api/admin/users?${params}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    setUsers(data.users);
-    setTotal(data.total);
-    setTotalPages(data.totalPages);
-    setLoading(false);
+      const res = await fetch(`/api/admin/users?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load");
+      setUsers(data.users ?? []);
+      setTotal(data.total ?? 0);
+      setTotalPages(data.totalPages ?? 1);
+    } catch (err: any) {
+      setError(err.message || "Failed to load users");
+    } finally {
+      setLoading(false);
+    }
   }, [page, search, statusFilter]);
 
   React.useEffect(() => {
@@ -66,7 +76,6 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -90,7 +99,14 @@ export default function AdminUsersPage() {
         </select>
       </div>
 
-      {/* Users Table */}
+      {error && (
+        <div className="p-4 rounded-xl bg-red-900/20 border border-red-800 text-red-400 text-sm flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          {error}
+          <button onClick={fetchUsers} className="ml-auto underline hover:text-red-300">Retry</button>
+        </div>
+      )}
+
       <div className="bg-slate-800/50 rounded-2xl border border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -204,30 +220,25 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-400">
-          Showing {(page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total} users
+          Showing {users.length === 0 ? 0 : (page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total} users
         </p>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="border-slate-700 text-slate-300"
+            className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-sm disabled:opacity-50"
           >
             Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
+          </button>
+          <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="border-slate-700 text-slate-300"
+            className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-sm disabled:opacity-50"
           >
             Next
-          </Button>
+          </button>
         </div>
       </div>
     </div>

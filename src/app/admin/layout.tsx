@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Users,
   FileText,
-  Settings,
   LogOut,
   Shield,
   Menu,
@@ -24,34 +23,53 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [authorized, setAuthorized] = React.useState(false);
+  const [checking, setChecking] = React.useState(true);
 
   React.useEffect(() => {
-    const token = localStorage.getItem("sp_admin_token");
-    const user = localStorage.getItem("sp_admin_user");
-    if (!token || !user) {
-      window.location.href = "/admin/login";
+    try {
+      const token = localStorage.getItem("sp_admin_token");
+      const user = localStorage.getItem("sp_admin_user");
+
+      if (!token || !user) {
+        window.location.replace("/admin/login");
+        return;
+      }
+
+      const parsed = JSON.parse(user);
+      if (parsed.role !== "ADMIN" && parsed.role !== "OWNER") {
+        window.location.replace("/admin/login");
+        return;
+      }
+
+      setAuthorized(true);
+    } catch {
+      window.location.replace("/admin/login");
       return;
+    } finally {
+      setChecking(false);
     }
-    const parsed = JSON.parse(user);
-    if (parsed.role !== "ADMIN" && parsed.role !== "OWNER") {
-      window.location.href = "/admin/login";
-      return;
-    }
-    setAuthorized(true);
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("sp_admin_token");
     localStorage.removeItem("sp_admin_user");
-    window.location.href = "/admin/login";
+    window.location.replace("/admin/login");
   };
 
-  if (!authorized) {
+  // Show nothing while checking (prevents flash)
+  if (checking && !authorized) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-400">Verifying access...</p>
+        </div>
       </div>
     );
+  }
+
+  if (!authorized) {
+    return null;
   }
 
   return (
@@ -111,7 +129,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main content */}
       <main className="flex-1 min-h-screen">
-        {/* Top bar */}
         <header className="sticky top-0 z-30 h-16 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 flex items-center px-6 gap-4">
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white">
             <Menu className="h-6 w-6" />

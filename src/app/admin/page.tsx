@@ -36,27 +36,54 @@ export default function AdminDashboard() {
   const [stats, setStats] = React.useState<Stats | null>(null);
   const [recentUsers, setRecentUsers] = React.useState<RecentUser[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
 
   React.useEffect(() => {
     const token = localStorage.getItem("sp_admin_token");
-    if (!token) return;
+    if (!token) {
+      window.location.href = "/admin/login";
+      return;
+    }
 
     fetch("/api/admin/stats", {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.json())
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || "Failed to load");
+        return data;
+      })
       .then((data) => {
         setStats(data.stats);
-        setRecentUsers(data.recentUsers);
+        setRecentUsers(data.recentUsers ?? []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        setError(err.message || "Failed to load dashboard");
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
         <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-slate-400">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <AlertCircle className="h-10 w-10 text-red-500" />
+        <p className="text-sm text-red-400">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm hover:bg-slate-700"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -74,7 +101,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card) => (
           <div key={card.label} className="bg-slate-800/50 rounded-2xl border border-slate-700 p-6">
@@ -90,7 +116,6 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Recent Users */}
       <div className="bg-slate-800/50 rounded-2xl border border-slate-700">
         <div className="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">Recent Users</h2>
@@ -99,34 +124,38 @@ export default function AdminDashboard() {
           </a>
         </div>
         <div className="divide-y divide-slate-700">
-          {recentUsers.map((user) => (
-            <div key={user.id} className="px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm">
-                  {(user.name ?? user.email).charAt(0).toUpperCase()}
+          {recentUsers.length === 0 ? (
+            <p className="px-6 py-8 text-center text-slate-400 text-sm">No users yet</p>
+          ) : (
+            recentUsers.map((user) => (
+              <div key={user.id} className="px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm">
+                    {(user.name ?? user.email).charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">{user.name ?? "No Name"}</p>
+                    <p className="text-xs text-slate-400">{user.email}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-white">{user.name ?? "No Name"}</p>
-                  <p className="text-xs text-slate-400">{user.email}</p>
+                <div className="flex items-center gap-3">
+                  <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                    user.role === "ADMIN" ? "bg-amber-500/10 text-amber-500" : "bg-slate-700 text-slate-300"
+                  }`}>
+                    {user.role}
+                  </span>
+                  <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                    user.status === "ACTIVE" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+                  }`}>
+                    {user.status}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                  user.role === "ADMIN" ? "bg-amber-500/10 text-amber-500" : "bg-slate-700 text-slate-300"
-                }`}>
-                  {user.role}
-                </span>
-                <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                  user.status === "ACTIVE" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-                }`}>
-                  {user.status}
-                </span>
-                <span className="text-xs text-slate-500">
-                  {new Date(user.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>
