@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Eye, EyeOff, Loader2, Shield } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = React.useState("");
@@ -10,6 +9,15 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [redirecting, setRedirecting] = React.useState(false);
+
+  // Check if already logged in
+  React.useEffect(() => {
+    const token = localStorage.getItem("sp_admin_token");
+    if (token) {
+      window.location.href = "/admin";
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,14 +45,32 @@ export default function AdminLoginPage() {
         return;
       }
 
+      // Store token and user data
       localStorage.setItem("sp_admin_token", data.token);
       localStorage.setItem("sp_admin_user", JSON.stringify(data.user));
-      window.location.href = "/admin";
+
+      setRedirecting(true);
+
+      // Small delay to ensure localStorage is written
+      setTimeout(() => {
+        window.location.href = "/admin";
+      }, 200);
     } catch {
       setError("Network error. Please try again.");
       setLoading(false);
     }
   };
+
+  if (redirecting) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-400 text-sm">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
@@ -98,13 +124,13 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            <Button
+            <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white py-3 text-base font-semibold rounded-xl shadow-lg shadow-amber-500/25"
+              disabled={loading || redirecting}
+              className="w-full bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white py-3 text-base font-semibold rounded-xl shadow-lg shadow-amber-500/25 disabled:opacity-50"
             >
-              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign In"}
-            </Button>
+              {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : "Sign In"}
+            </button>
           </form>
         </div>
       </div>

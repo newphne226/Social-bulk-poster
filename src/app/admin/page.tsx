@@ -49,13 +49,21 @@ export default function AdminDashboard() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (r) => {
+        if (r.status === 401 || r.status === 403) {
+          localStorage.removeItem("sp_admin_token");
+          localStorage.removeItem("sp_admin_user");
+          window.location.href = "/admin/login";
+          return;
+        }
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || "Failed to load");
         return data;
       })
       .then((data) => {
-        setStats(data.stats);
-        setRecentUsers(data.recentUsers ?? []);
+        if (data) {
+          setStats(data.stats);
+          setRecentUsers(data.recentUsers ?? []);
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -68,7 +76,6 @@ export default function AdminDashboard() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-slate-400">Loading dashboard...</p>
       </div>
     );
   }
