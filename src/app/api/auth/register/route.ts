@@ -2,22 +2,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import crypto from "crypto";
 
-// In-memory token store for the demo (production: use JWT or NextAuth sessions).
-// Map: token -> { userId, issuedAt, expiresAt }
-const activeTokens = new Map<string, { userId: string; issuedAt: number; expiresAt: number }>();
-
-// Export so login route can read/write the same store
-export { activeTokens };
+// Stateless token: base64url(userId:expiresAt:signature)
+// No in-memory store needed — works on Vercel serverless.
+const SECRET = process.env.TOKEN_SECRET || "sp-demo-secret-key-change-in-production";
 
 export function generateToken(userId: string, remember = false): string {
-  const token = `sp_${Buffer.from(`${userId}:${Date.now()}:${Math.random()}`).toString("base64url")}`;
-  activeTokens.set(token, {
-    userId,
-    issuedAt: Date.now(),
-    expiresAt: Date.now() + (remember ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000),
-  });
-  return token;
+  const expiresAt = Date.now() + (remember ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000);
+  const payload = `${userId}:${expiresAt}`;
+  const signature = crypto.createHmac("sha256", SECRET).update(payload).digest("base64url");
+  const token = Buffer.from(`${payload}:${signature}`).toString("base64url");
+  return `sp_${token}`;
+}
+
+export function verifyToken(token: string): { userId: string; expiresAt: number } | null {
+  try {
+    if (!token.startsWith("sp_")) return null;
+    const decoded = Buffer.from(token.slice(3), "base64url").toString("utf-8");
+    const parts = decoded.split(":");
+    if (parts.length !== 3) return null;
+
+    const [userId, expiresAtStr, signature] = parts;
+    const expiresAt = parseInt(expiresAtStr, 10);
+    if (isNaN(expiresAt) || Date.now() > expiresAt) return null;
+
+    // Verify signature
+    const payload = `${userId}:${expiresAt}`;
+    const expected = crypto.createHmac("sha256", SECRET).update(payload).digest("base64url");
+    if (signature !== expected) return null;
+
+    return { userId, expiresAt };
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -30,7 +48,6 @@ export async function POST(request: NextRequest) {
 
   const { email, password, name } = body ?? {};
 
-  // ----- Validation -----
   if (!email || !password || !name) {
     return NextResponse.json(
       { error: "Name, email, and password are all required." },
@@ -41,7 +58,6 @@ export async function POST(request: NextRequest) {
   const normalizedEmail = String(email).trim().toLowerCase();
   const trimmedName = String(name).trim();
 
-  // Email format
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRe.test(normalizedEmail)) {
     return NextResponse.json(
@@ -50,7 +66,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Password strength
   if (typeof password !== "string" || password.length < 6) {
     return NextResponse.json(
       { error: "Password must be at least 6 characters long." },
@@ -78,7 +93,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // ----- Check if user already exists -----
     const existing = await db.user.findUnique({
       where: { email: normalizedEmail },
       select: { id: true },
@@ -90,10 +104,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ----- Hash password -----
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // ----- Create user + default settings in a transaction -----
     const user = await db.$transaction(async (tx) => {
       const newUser = await tx.user.create({
         data: {
@@ -102,13 +114,12 @@ export async function POST(request: NextRequest) {
           passwordHash,
           role: "USER",
           status: "ACTIVE",
-          emailVerified: new Date(), // demo: auto-verify. Production: send email.
+          emailVerified: new Date(),
           lastLoginAt: new Date(),
           avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(trimmedName)}`,
         },
       });
 
-      // Create default user settings (safe-posting defaults)
       await tx.userSettings.create({
         data: {
           userId: newUser.id,
@@ -116,7 +127,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Find or create the FREE plan and subscribe the user
       const freePlan = await tx.plan.findFirst({
         where: { tier: "FREE" },
       });
@@ -136,7 +146,6 @@ export async function POST(request: NextRequest) {
       return newUser;
     });
 
-    // ----- Generate auth token -----
     const remember = body?.remember === true;
     const token = generateToken(user.id, remember);
 
@@ -162,7 +171,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (err: any) {
     console.error("[auth/register] error", err);
-    // Prisma unique constraint violation
     if (err?.code === "P2002") {
       return NextResponse.json(
         { error: "An account with this email already exists." },

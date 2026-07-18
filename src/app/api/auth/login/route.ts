@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { generateToken, activeTokens } from "../register/route";
+import { generateToken } from "../register/route";
 
 export async function POST(request: NextRequest) {
   let body;
@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
   const normalizedEmail = String(email).trim().toLowerCase();
 
   try {
-    // ----- Look up user -----
     const user = await db.user.findUnique({
       where: { email: normalizedEmail },
       include: {
@@ -35,17 +34,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user || !user.passwordHash) {
-      // Use the same error message for "no user" and "wrong password" to
-      // prevent user enumeration attacks.
       return NextResponse.json(
         { error: "Invalid email or password." },
         { status: 401 }
       );
     }
 
-    // subscription is a single optional relation (Subscription?), not an array
-
-    // ----- Check account status -----
     if (user.status === "BANNED") {
       return NextResponse.json(
         { error: "This account has been banned. Contact support if you believe this is an error." },
@@ -65,7 +59,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ----- Verify password -----
     const passwordOk = await bcrypt.compare(password, user.passwordHash);
     if (!passwordOk) {
       return NextResponse.json(
@@ -74,17 +67,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ----- Update last login -----
     await db.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
 
-    // ----- Generate token -----
     const remember = body?.remember === true;
     const token = generateToken(user.id, remember);
 
-    // ----- Build response -----
     const plan = user.subscription?.plan?.tier ?? "FREE";
     const subscriptionStatus = user.subscription?.status ?? "ACTIVE";
 
@@ -114,17 +104,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// GET /api/auth/login — purge expired tokens (could be a cron in production)
-export async function GET() {
-  const now = Date.now();
-  let purged = 0;
-  for (const [token, info] of activeTokens.entries()) {
-    if (info.expiresAt < now) {
-      activeTokens.delete(token);
-      purged++;
-    }
-  }
-  return NextResponse.json({ ok: true, purged, remaining: activeTokens.size });
 }

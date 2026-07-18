@@ -1,13 +1,11 @@
 // =====================================================================
 // API auth helpers — shared across all route handlers
-// Verifies the Bearer token against the in-memory token store AND
-// loads the real user from the Prisma database.
+// Stateless token verification — works on Vercel serverless.
 // =====================================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-
-const ADMIN_SECRET_TOKEN = "admin-secret-token";
+import { verifyToken } from "@/app/api/auth/register/route";
 
 export type PlanTier = "FREE" | "SILVER" | "VIP_PRO" | "ENTERPRISE";
 
@@ -24,9 +22,8 @@ export type AuthResult =
   | { ok: false; response: NextResponse };
 
 /**
- * Reads the Authorization header, looks up the token in the activeTokens
- * store, and loads the matching user from the database. Returns 401 if the
- * token is missing, expired, or doesn't map to a user.
+ * Reads the Authorization header, verifies the stateless token, and
+ * loads the matching user from the database.
  */
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   const header = request.headers.get("authorization") ?? "";
@@ -42,23 +39,9 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   }
 
   const token = match[1].trim();
+  const payload = verifyToken(token);
 
-  // Import the token store dynamically to avoid circular imports
-  const { activeTokens } = await import("@/app/api/auth/register/route");
-
-  // Bug #11 fix: opportunistic cleanup of expired tokens (every call)
-  // This prevents the Map from growing without bound. In production this
-  // would be a cron job, but for the demo we piggyback on requireAuth.
-  if (activeTokens.size > 1000) {
-    const now = Date.now();
-    for (const [t, info] of activeTokens.entries()) {
-      if (info.expiresAt < now) activeTokens.delete(t);
-    }
-  }
-
-  const session = activeTokens.get(token);
-
-  if (!session) {
+  if (!payload) {
     return {
       ok: false,
       response: NextResponse.json(
@@ -68,20 +51,9 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     };
   }
 
-  if (session.expiresAt < Date.now()) {
-    activeTokens.delete(token);
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: "Unauthorized — session expired. Please sign in again." },
-        { status: 401 }
-      ),
-    };
-  }
-
   try {
     const dbUser = await db.user.findUnique({
-      where: { id: session.userId },
+      where: { id: payload.userId },
       include: {
         subscription: {
           include: { plan: true },
@@ -90,7 +62,6 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     });
 
     if (!dbUser || dbUser.deletedAt) {
-      activeTokens.delete(token);
       return {
         ok: false,
         response: NextResponse.json(
@@ -136,18 +107,15 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
 
 /**
  * Same as requireAuth, but additionally gates on admin access:
- *  - `x-admin-token` header equal to ADMIN_SECRET_TOKEN, OR
  *  - the user's role is ADMIN or OWNER.
  */
 export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
   const auth = await requireAuth(request);
   if (!auth.ok) return auth;
 
-  const adminToken = request.headers.get("x-admin-token");
-  const isAdminByToken = adminToken === ADMIN_SECRET_TOKEN;
   const isAdminByRole = auth.user.role === "ADMIN" || auth.user.role === "OWNER";
 
-  if (!isAdminByToken && !isAdminByRole) {
+  if (!isAdminByRole) {
     return {
       ok: false,
       response: NextResponse.json(
