@@ -6,8 +6,17 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { VisitorCounter } from "@/components/visitor-counter";
 
-const CHROME_STORE_URL = "https://chrome.google.com/webstore/detail/socialpilot";
+const EXTENSION_ZIP_URL = "/chrome-extension.zip";
 const DEMO_URL = "https://youtube.com/watch?v=demo";
+
+function downloadExtension() {
+  const a = document.createElement("a");
+  a.href = EXTENSION_ZIP_URL;
+  a.download = "socialpilot-chrome-extension.zip";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 
 function scrollToSection(sectionId: string) {
   const element = document.getElementById(sectionId);
@@ -75,7 +84,7 @@ export function ExtensionPreview() {
               <Button 
                 size="sm" 
                 className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white shadow-lg shadow-amber-500/25"
-                onClick={() => openExternalLink(CHROME_STORE_URL)}
+                onClick={() => downloadExtension()}
               >
                 Get Extension
               </Button>
@@ -106,10 +115,10 @@ export function ExtensionPreview() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white shadow-xl shadow-amber-500/30 px-8 py-4 text-lg" onClick={() => openExternalLink(CHROME_STORE_URL)}>
+                <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white shadow-xl shadow-amber-500/30 px-8 py-4 text-lg" onClick={() => downloadExtension()}>
                   <span className="flex items-center gap-2">
                     <Chrome className="h-5 w-5" />
-                    Add to Chrome — Free
+                    Download Now — Free
                   </span>
                 </Button>
                 <Button size="lg" variant="outline" className="w-full sm:w-auto border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 px-8 py-4 text-lg" onClick={() => openExternalLink(DEMO_URL)}>
@@ -308,9 +317,9 @@ export function ExtensionPreview() {
               Join 10,000+ creators saving 10+ hours/week. Free to start. Cancel anytime.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="w-full sm:w-auto bg-white text-amber-600 hover:bg-amber-50 px-8 py-4 text-lg font-semibold shadow-xl" onClick={() => openExternalLink(CHROME_STORE_URL)}>
+              <Button size="lg" className="w-full sm:w-auto bg-white text-amber-600 hover:bg-amber-50 px-8 py-4 text-lg font-semibold shadow-xl" onClick={() => downloadExtension()}>
                 <Chrome className="h-5 w-5 mr-2" />
-                Add to Chrome — Free
+                Download Now — Free
               </Button>
               <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold" onClick={() => openExternalLink(DEMO_URL)}>
                 Watch 2-min Demo
