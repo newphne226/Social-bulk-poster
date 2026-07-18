@@ -286,7 +286,8 @@ export function ExtensionPreview() {
                 </div>
                 <span className="font-semibold text-lg">SocialPilot</span>
               </div>
-              <p className="text-slate-400 text-sm">The fastest way to schedule & publish to 5 platforms.</            </div>
+              <p className="text-slate-400 text-sm">The fastest way to schedule & publish to 5 platforms.</p>
+            </div>
             <div>
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-slate-400 text-sm">
