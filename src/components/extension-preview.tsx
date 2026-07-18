@@ -68,7 +68,7 @@ export function ExtensionPreview() {
                 variant="ghost" 
                 size="sm" 
                 className="hidden sm:flex"
-                onClick={() => scrollToSection("pricing")}
+                onClick={() => window.location.href = "/signin"}
               >
                 Sign In
               </Button>
