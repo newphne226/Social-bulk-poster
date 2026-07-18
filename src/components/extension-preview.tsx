@@ -318,7 +318,7 @@ export function ExtensionPreview() {
       {/* Footer */}
       <footer className="bg-slate-900 text-white py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+          <div className="grid md:grid-cols-3 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-pink-500 flex items-center justify-center">
@@ -337,15 +337,6 @@ export function ExtensionPreview() {
                 <li><a href="#platforms" onClick={(e) => { e.preventDefault(); scrollToSection("platforms"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Platforms</a></li>
                 <li><a href="#pricing" onClick={(e) => { e.preventDefault(); scrollToSection("pricing"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Pricing</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://docs.socialpilot.io"); }} className="hover:text-amber-400 transition-colors cursor-pointer">API Docs</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-slate-400 text-sm">
-                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://socialpilot.io/about"); }} className="hover:text-amber-400 transition-colors cursor-pointer">About</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://blog.socialpilot.io"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Blog</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://socialpilot.io/careers"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Careers</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://socialpilot.io/contact"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Contact</a></li>
               </ul>
             </div>
             <div>
