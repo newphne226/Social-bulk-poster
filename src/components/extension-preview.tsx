@@ -5,6 +5,20 @@ import { Chrome, Smartphone, Globe, Zap, Shield, CheckCircle } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+const CHROME_STORE_URL = "https://chrome.google.com/webstore/detail/socialpilot";
+const DEMO_URL = "https://youtube.com/watch?v=demo";
+
+function scrollToSection(sectionId: string) {
+  const element = document.getElementById(sectionId);
+  if (element) {
+    element.scrollIntoView({ behavior: "smooth" });
+  }
+}
+
+function openExternalLink(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 export function ExtensionPreview() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-pink-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900">
@@ -21,13 +35,40 @@ export function ExtensionPreview() {
               <span className="font-semibold text-lg text-slate-900 dark:text-white">SocialPilot</span>
             </div>
             <div className="flex items-center gap-4">
-              <a href="#features" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Features</a>
-              <a href="#platforms" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Platforms</a>
-              <a href="#pricing" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Pricing</a>
-              <Button variant="ghost" size="sm" className="hidden sm:flex">
+              <a 
+                href="#features" 
+                onClick={(e) => { e.preventDefault(); scrollToSection("features"); }}
+                className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer"
+              >
+                Features
+              </a>
+              <a 
+                href="#platforms" 
+                onClick={(e) => { e.preventDefault(); scrollToSection("platforms"); }}
+                className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer"
+              >
+                Platforms
+              </a>
+              <a 
+                href="#pricing" 
+                onClick={(e) => { e.preventDefault(); scrollToSection("pricing"); }}
+                className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer"
+              >
+                Pricing
+              </a>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="hidden sm:flex"
+                onClick={() => scrollToSection("pricing")}
+              >
                 Sign In
               </Button>
-              <Button size="sm" className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white shadow-lg shadow-amber-500/25">
+              <Button 
+                size="sm" 
+                className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white shadow-lg shadow-amber-500/25"
+                onClick={() => openExternalLink(CHROME_STORE_URL)}
+              >
                 Get Extension
               </Button>
             </div>
@@ -57,13 +98,13 @@ export function ExtensionPreview() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white shadow-xl shadow-amber-500/30 px-8 py-4 text-lg">
+                <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white shadow-xl shadow-amber-500/30 px-8 py-4 text-lg" onClick={() => openExternalLink(CHROME_STORE_URL)}>
                   <span className="flex items-center gap-2">
                     <Chrome className="h-5 w-5" />
                     Add to Chrome — Free
                   </span>
                 </Button>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 px-8 py-4 text-lg">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 px-8 py-4 text-lg" onClick={() => openExternalLink(DEMO_URL)}>
                   <span className="flex items-center gap-2">
                     <Smartphone className="h-5 w-5" />
                     View Demo
@@ -142,8 +183,9 @@ export function ExtensionPreview() {
                           key={p.name}
                           className={cn(
                             "flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 transition-all",
-                            "border-slate-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500"
+                            "border-slate-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500 cursor-pointer"
                           )}
+                          onClick={() => console.log(`Select platform: ${p.name}`)}
                         >
                           <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold", p.color)}>
                             {p.icon}
@@ -155,7 +197,7 @@ export function ExtensionPreview() {
                   </div>
 
                   {/* Schedule Button */}
-                  <Button className="w-full bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white shadow-lg shadow-amber-500/30 py-3 text-base font-semibold rounded-xl">
+                  <Button className="w-full bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white shadow-lg shadow-amber-500/30 py-3 text-base font-semibold rounded-xl" onClick={() => console.log("Schedule post clicked")}>
                     <span className="flex items-center justify-center gap-2">
                       <Zap className="h-4 w-4" />
                       Schedule Post
@@ -258,11 +300,11 @@ export function ExtensionPreview() {
               Join 10,000+ creators saving 10+ hours/week. Free to start. Cancel anytime.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="w-full sm:w-auto bg-white text-amber-600 hover:bg-amber-50 px-8 py-4 text-lg font-semibold shadow-xl">
+              <Button size="lg" className="w-full sm:w-auto bg-white text-amber-600 hover:bg-amber-50 px-8 py-4 text-lg font-semibold shadow-xl" onClick={() => openExternalLink(CHROME_STORE_URL)}>
                 <Chrome className="h-5 w-5 mr-2" />
                 Add to Chrome — Free
               </Button>
-              <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold" onClick={() => openExternalLink(DEMO_URL)}>
                 Watch 2-min Demo
               </Button>
             </div>
@@ -291,27 +333,27 @@ export function ExtensionPreview() {
             <div>
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-slate-400 text-sm">
-                <li><a href="#features" className="hover:text-amber-400 transition-colors">Features</a></li>
-                <li><a href="#platforms" className="hover:text-amber-400 transition-colors">Platforms</a></li>
-                <li><a href="#pricing" className="hover:text-amber-400 transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-amber-400 transition-colors">API Docs</a></li>
+                <li><a href="#features" onClick={(e) => { e.preventDefault(); scrollToSection("features"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Features</a></li>
+                <li><a href="#platforms" onClick={(e) => { e.preventDefault(); scrollToSection("platforms"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Platforms</a></li>
+                <li><a href="#pricing" onClick={(e) => { e.preventDefault(); scrollToSection("pricing"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Pricing</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://docs.socialpilot.io"); }} className="hover:text-amber-400 transition-colors cursor-pointer">API Docs</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Company</h4>
               <ul className="space-y-2 text-slate-400 text-sm">
-                <li><a href="#" className="hover:text-amber-400 transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-amber-400 transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-amber-400 transition-colors">Careers</a></li>
-                <li><a href="#" className="hover:text-amber-400 transition-colors">Contact</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://socialpilot.io/about"); }} className="hover:text-amber-400 transition-colors cursor-pointer">About</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://blog.socialpilot.io"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Blog</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://socialpilot.io/careers"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Careers</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://socialpilot.io/contact"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Contact</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-slate-400 text-sm">
-                <li><a href="#" className="hover:text-amber-400 transition-colors">Privacy</a></li>
-                <li><a href="#" className="hover:text-amber-400 transition-colors">Terms</a></li>
-                <li><a href="#" className="hover:text-amber-400 transition-colors">Cookie Policy</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://socialpilot.io/privacy"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Privacy</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://socialpilot.io/terms"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Terms</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://socialpilot.io/cookies"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Cookie Policy</a></li>
               </ul>
             </div>
           </div>
