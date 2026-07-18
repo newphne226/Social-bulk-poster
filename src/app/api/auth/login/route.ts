@@ -49,8 +49,8 @@ async function ensureSeeded() {
       });
     }
     console.log("[auth/login] Seeded admin user and plans");
-  } catch (err) {
-    console.error("[auth/login] Seed error (non-fatal):", err);
+  } catch (err: any) {
+    console.error("[auth/login] Seed error (non-fatal):", err?.message || err);
   }
 }
 
@@ -132,10 +132,10 @@ export async function POST(request: NextRequest) {
         cancelAtPeriodEnd: user.subscription?.cancelAtPeriodEnd ?? false,
       },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("[auth/login] error", err);
     return NextResponse.json(
-      { error: "Login failed. Please try again." },
+      { error: "Login failed. Please try again.", details: err?.message || String(err) },
       { status: 500 }
     );
   }
