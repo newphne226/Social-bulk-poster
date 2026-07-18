@@ -10,6 +10,7 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
   const [redirecting, setRedirecting] = React.useState(false);
+  const [seeding, setSeeding] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,6 +18,15 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
+      // First, ensure DB is seeded
+      setSeeding(true);
+      try {
+        await fetch("/api/admin/seed", { method: "POST" });
+      } catch {
+        // seed failed, but try login anyway
+      }
+      setSeeding(false);
+
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -41,14 +51,13 @@ export default function AdminLoginPage() {
       localStorage.setItem("sp_admin_user", JSON.stringify(data.user));
 
       setRedirecting(true);
-
-      // Use window.location.replace to avoid back-button loop
       setTimeout(() => {
         window.location.replace("/admin");
       }, 300);
     } catch {
       setError("Network error. Please try again.");
       setLoading(false);
+      setSeeding(false);
     }
   };
 
@@ -79,6 +88,13 @@ export default function AdminLoginPage() {
             <div className="mb-4 p-3 rounded-xl bg-red-900/20 border border-red-800 text-red-400 text-sm flex items-start gap-2">
               <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {seeding && (
+            <div className="mb-4 p-3 rounded-xl bg-amber-900/20 border border-amber-800 text-amber-400 text-sm flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Setting up database...</span>
             </div>
           )}
 
