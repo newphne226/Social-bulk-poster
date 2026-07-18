@@ -397,6 +397,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
               <h4 className="font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-slate-400 text-sm">
                 <li><Link href="/privacy" className="hover:text-amber-400 transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-amber-400 transition-colors">Terms of Service</Link></li>
                 <li><Link href="/cookies" className="hover:text-amber-400 transition-colors">Cookie Policy</Link></li>
               </ul>
             </div>

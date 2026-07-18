@@ -358,6 +358,7 @@ export function ExtensionPreview() {
               <h4 className="font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-slate-400 text-sm">
                 <li><a href="/privacy" className="hover:text-amber-400 transition-colors cursor-pointer">Privacy</a></li>
+                <li><a href="/terms" className="hover:text-amber-400 transition-colors cursor-pointer">Terms</a></li>
                 <li><a href="/cookies" className="hover:text-amber-400 transition-colors cursor-pointer">Cookie Policy</a></li>
               </ul>
             </div>
