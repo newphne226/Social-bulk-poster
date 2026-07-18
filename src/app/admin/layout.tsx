@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const timer = setTimeout(() => {
       const token = localStorage.getItem("sp_admin_token");
       if (!token) {
-        window.location.href = "/admin/login";
+        window.location.replace("/admin/login");
         return;
       }
       setReady(true);

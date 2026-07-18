@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, EyeOff, Loader2, Shield } from "lucide-react";
+import { Eye, EyeOff, Loader2, Shield, AlertCircle } from "lucide-react";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = React.useState("");
@@ -10,14 +10,6 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
   const [redirecting, setRedirecting] = React.useState(false);
-
-  // Check if already logged in
-  React.useEffect(() => {
-    const token = localStorage.getItem("sp_admin_token");
-    if (token) {
-      window.location.href = "/admin";
-    }
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,16 +37,15 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Store token and user data
       localStorage.setItem("sp_admin_token", data.token);
       localStorage.setItem("sp_admin_user", JSON.stringify(data.user));
 
       setRedirecting(true);
 
-      // Small delay to ensure localStorage is written
+      // Use window.location.replace to avoid back-button loop
       setTimeout(() => {
-        window.location.href = "/admin";
-      }, 200);
+        window.location.replace("/admin");
+      }, 300);
     } catch {
       setError("Network error. Please try again.");
       setLoading(false);
@@ -85,8 +76,9 @@ export default function AdminLoginPage() {
 
         <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-8">
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-red-900/20 border border-red-800 text-red-400 text-sm">
-              {error}
+            <div className="mb-4 p-3 rounded-xl bg-red-900/20 border border-red-800 text-red-400 text-sm flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 

@@ -41,7 +41,7 @@ export default function AdminDashboard() {
   React.useEffect(() => {
     const token = localStorage.getItem("sp_admin_token");
     if (!token) {
-      window.location.href = "/admin/login";
+      window.location.replace("/admin/login");
       return;
     }
 
@@ -49,21 +49,13 @@ export default function AdminDashboard() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (r) => {
-        if (r.status === 401 || r.status === 403) {
-          localStorage.removeItem("sp_admin_token");
-          localStorage.removeItem("sp_admin_user");
-          window.location.href = "/admin/login";
-          return;
-        }
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || "Failed to load");
         return data;
       })
       .then((data) => {
-        if (data) {
-          setStats(data.stats);
-          setRecentUsers(data.recentUsers ?? []);
-        }
+        setStats(data.stats);
+        setRecentUsers(data.recentUsers ?? []);
         setLoading(false);
       })
       .catch((err) => {
@@ -85,12 +77,24 @@ export default function AdminDashboard() {
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <AlertCircle className="h-10 w-10 text-red-500" />
         <p className="text-sm text-red-400">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm hover:bg-slate-700"
-        >
-          Retry
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm hover:bg-slate-700"
+          >
+            Retry
+          </button>
+          <button
+            onClick={() => {
+              localStorage.removeItem("sp_admin_token");
+              localStorage.removeItem("sp_admin_user");
+              window.location.replace("/admin/login");
+            }}
+            className="px-4 py-2 rounded-xl bg-red-900/30 text-red-400 text-sm hover:bg-red-900/50"
+          >
+            Re-login
+          </button>
+        </div>
       </div>
     );
   }
