@@ -1,8 +1,45 @@
 // POST /api/auth/login — verifies against the Prisma database.
+// Auto-seeds admin user if DB is empty (first run on Vercel).
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { generateToken } from "../register/route";
+
+async function ensureAdminSeeded() {
+  const adminExists = await db.user.findUnique({
+    where: { email: "admin@test.com" },
+    select: { id: true },
+  });
+  if (adminExists) return;
+
+  const hash = await bcrypt.hash("admin123", 10);
+  const user = await db.user.create({
+    data: {
+      email: "admin@test.com",
+      name: "Admin",
+      passwordHash: hash,
+      role: "ADMIN",
+      status: "ACTIVE",
+      emailVerified: new Date(),
+      lastLoginAt: new Date(),
+      avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=Admin",
+    },
+  });
+
+  const freePlan = await db.plan.findFirst({ where: { tier: "FREE" } });
+  if (freePlan) {
+    await db.subscription.create({
+      data: {
+        userId: user.id,
+        planId: freePlan.id,
+        status: "ACTIVE",
+        billingCycle: "MONTHLY",
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+}
 
 export async function POST(request: NextRequest) {
   let body;
@@ -24,6 +61,9 @@ export async function POST(request: NextRequest) {
   const normalizedEmail = String(email).trim().toLowerCase();
 
   try {
+    // Auto-seed admin on first run
+    await ensureAdminSeeded();
+
     const user = await db.user.findUnique({
       where: { email: normalizedEmail },
       include: {
@@ -42,13 +82,13 @@ export async function POST(request: NextRequest) {
 
     if (user.status === "BANNED") {
       return NextResponse.json(
-        { error: "This account has been banned. Contact support if you believe this is an error." },
+        { error: "This account has been banned. Contact support." },
         { status: 403 }
       );
     }
     if (user.status === "SUSPENDED") {
       return NextResponse.json(
-        { error: "This account is suspended. Contact support to restore access." },
+        { error: "This account is suspended. Contact support." },
         { status: 403 }
       );
     }
