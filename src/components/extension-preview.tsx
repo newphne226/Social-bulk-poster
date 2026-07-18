@@ -81,6 +81,12 @@ export function ExtensionPreview() {
               >
                 Sign In
               </Button>
+              <a 
+                href="/admin"
+                className="text-xs font-medium text-slate-400 hover:text-amber-500 transition-colors hidden sm:block"
+              >
+                Admin
+              </a>
               <Button 
                 size="sm" 
                 className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white shadow-lg shadow-amber-500/25"
