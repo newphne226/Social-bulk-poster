@@ -4,6 +4,7 @@ import * as React from "react";
 import { Chrome, Smartphone, Globe, Zap, Shield, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { VisitorCounter } from "@/components/visitor-counter";
 
 const CHROME_STORE_URL = "https://chrome.google.com/webstore/detail/socialpilot";
 const DEMO_URL = "https://youtube.com/watch?v=demo";
@@ -33,6 +34,7 @@ export function ExtensionPreview() {
                 </svg>
               </div>
               <span className="font-semibold text-lg text-slate-900 dark:text-white">SocialPilot</span>
+              <VisitorCounter />
             </div>
             <div className="flex items-center gap-4">
               <a 
