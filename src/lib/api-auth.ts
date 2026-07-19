@@ -54,11 +54,6 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   try {
     const dbUser = await db.user.findUnique({
       where: { id: payload.userId },
-      include: {
-        subscription: {
-          include: { plan: true },
-        },
-      },
     });
 
     if (!dbUser || dbUser.deletedAt) {
@@ -93,7 +88,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
       };
     }
 
-    const plan = (dbUser.subscription?.plan?.tier as PlanTier) ?? "FREE";
+    const plan = "FREE" as PlanTier;
 
     return {
       ok: true,
