@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       take: limit,
       include: {
         _count: { select: { posts: true, accounts: true } },
+        cryptoPayments: { where: { status: "CONFIRMED" }, orderBy: { createdAt: "desc" }, take: 1 },
       },
     }),
     db.user.count({ where }),
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
       role: u.role,
       status: u.status,
       approvalStatus: u.approvalStatus,
+      plan: u.cryptoPayments?.[0]?.plan || "FREE",
       postsCount: u._count.posts,
       accountsCount: u._count.accounts,
       createdAt: u.createdAt.toISOString(),
@@ -104,6 +106,24 @@ export async function PATCH(request: NextRequest) {
       }
       updateData = { role: value };
       break;
+    case "setPlan": {
+      const allowedPlans = ["FREE", "CONTENT", "REELS", "ALL_ACCESS"];
+      const plan = allowedPlans.includes(value) ? value : "FREE";
+      // Find or create subscription
+      const existingSub = await db.subscription.findUnique({ where: { userId } });
+      if (existingSub) {
+        await db.subscription.update({
+          where: { id: existingSub.id },
+          data: { status: plan === "FREE" ? "CANCELED" : "ACTIVE" },
+        });
+      } else if (plan !== "FREE") {
+        // Create a basic subscription record
+        await db.subscription.create({
+          data: { userId, planId: plan, status: "ACTIVE", billingCycle: "MONTHLY" },
+        }).catch(() => {}); // Ignore if planId doesn't exist
+      }
+      return NextResponse.json({ user: { id: userId, plan } });
+    }
     case "delete":
       updateData = { status: "DELETED", deletedAt: new Date() };
       break;

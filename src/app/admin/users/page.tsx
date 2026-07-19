@@ -10,6 +10,7 @@ interface User {
   role: string;
   status: string;
   approvalStatus: string;
+  plan: string;
   postsCount: number;
   accountsCount: number;
   createdAt: string;
@@ -44,6 +45,7 @@ export default function AdminUsersPage() {
   const [formStatus, setFormStatus] = React.useState("ACTIVE");
   const [formApproval, setFormApproval] = React.useState("APPROVED");
   const [formRole, setFormRole] = React.useState("USER");
+  const [formPlan, setFormPlan] = React.useState("FREE");
 
   const fetchUsers = React.useCallback(async () => {
     const token = localStorage.getItem("sp_admin_token");
@@ -78,6 +80,7 @@ export default function AdminUsersPage() {
     setFormStatus(user.status);
     setFormApproval(user.approvalStatus);
     setFormRole(user.role);
+    setFormPlan(user.plan || "FREE");
   };
 
   const handleSave = async () => {
@@ -113,6 +116,15 @@ export default function AdminUsersPage() {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify({ userId: editUser.id, action: "setRole", value: formRole }),
+        });
+      }
+
+      // Plan change
+      if (formPlan !== (editUser.plan || "FREE")) {
+        await fetch("/api/admin/users", {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: editUser.id, action: "setPlan", value: formPlan }),
         });
       }
 
@@ -168,6 +180,7 @@ export default function AdminUsersPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Approval</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Plan</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Posts</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Joined</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-slate-400 uppercase">Actions</th>
@@ -175,11 +188,11 @@ export default function AdminUsersPage() {
             </thead>
             <tbody className="divide-y divide-slate-700">
               {loading ? (
-                <tr><td colSpan={7} className="px-6 py-12 text-center">
+                <tr><td colSpan={8} className="px-6 py-12 text-center">
                   <div className="h-6 w-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
                 </td></tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400">No users found</td></tr>
+                <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400">No users found</td></tr>
               ) : (
                 users.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-800/50 transition-colors">
@@ -207,6 +220,16 @@ export default function AdminUsersPage() {
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-lg text-xs font-medium ${APPROVAL_COLORS[user.approvalStatus] || ""}`}>
                         {user.approvalStatus}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                        user.plan === "ALL_ACCESS" ? "bg-amber-500/10 text-amber-500" :
+                        user.plan === "REELS" ? "bg-purple-500/10 text-purple-500" :
+                        user.plan === "CONTENT" ? "bg-blue-500/10 text-blue-500" :
+                        "bg-slate-700 text-slate-400"
+                      }`}>
+                        {user.plan || "FREE"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-300">{user.postsCount}</td>
@@ -315,6 +338,34 @@ export default function AdminUsersPage() {
                     }`}
                   >
                     {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Membership Plan */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Membership Plan</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: "FREE", label: "Free", color: "slate" },
+                  { id: "CONTENT", label: "Content ($3)", color: "blue" },
+                  { id: "REELS", label: "Reels ($5)", color: "purple" },
+                  { id: "ALL_ACCESS", label: "All Access ($10)", color: "amber" },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setFormPlan(p.id)}
+                    className={`px-3 py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                      formPlan === p.id
+                        ? p.id === "ALL_ACCESS" ? "border-amber-500 bg-amber-500/10 text-amber-500"
+                        : p.id === "REELS" ? "border-purple-500 bg-purple-500/10 text-purple-500"
+                        : p.id === "CONTENT" ? "border-blue-500 bg-blue-500/10 text-blue-500"
+                        : "border-slate-500 bg-slate-500/10 text-slate-400"
+                        : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600"
+                    }`}
+                  >
+                    {p.label}
                   </button>
                 ))}
               </div>
