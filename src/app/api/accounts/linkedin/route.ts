@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
+import { verifyToken } from "@/app/api/auth/register/route";
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || "";
 const REDIRECT_URI = process.env.NEXT_PUBLIC_SITE_URL
@@ -9,8 +9,17 @@ const REDIRECT_URI = process.env.NEXT_PUBLIC_SITE_URL
 const LINKEDIN_SCOPE = "w_member_social r_liteprofile r_emailaddress";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth(request);
-  if (!auth.ok) return auth.response;
+  const url = new URL(request.url);
+  const token = url.searchParams.get("token");
+
+  if (!token) {
+    return NextResponse.json({ error: "Missing token" }, { status: 401 });
+  }
+
+  const payload = verifyToken(token);
+  if (!payload) {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
 
   if (!LINKEDIN_CLIENT_ID) {
     return NextResponse.json(
@@ -19,9 +28,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const userToken = request.headers.get("authorization")?.replace("Bearer ", "") || "";
-
-  const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${LINKEDIN_SCOPE}&state=${encodeURIComponent(userToken)}`;
+  const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${LINKEDIN_SCOPE}&state=${encodeURIComponent(token)}`;
 
   return NextResponse.redirect(linkedinAuthUrl);
 }
