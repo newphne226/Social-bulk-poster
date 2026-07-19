@@ -57,8 +57,9 @@ export default function PaymentsPage() {
       if (methodFilter) params.set("method", methodFilter);
       if (search) params.set("search", search);
       const res = await fetch(`/api/admin/payments?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!res.ok) throw new Error(data.error || "Failed to load");
       setPayments(data.payments ?? []);
       setTotal(data.total ?? 0);
       setTotalPages(data.totalPages ?? 1);
