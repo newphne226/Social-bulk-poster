@@ -8,15 +8,31 @@ import {
   TrendingUp,
   ArrowUpRight,
   Calendar,
+  Crown,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 
 const API = "https://smtools.online/api";
 
+const PLAN_NAMES: Record<string, string> = {
+  CONTENT: "Content",
+  REELS: "Reels",
+  ALL_ACCESS: "All Access",
+};
+
+const PLAN_COLORS: Record<string, string> = {
+  CONTENT: "from-blue-500 to-cyan-500",
+  REELS: "from-purple-500 to-pink-500",
+  ALL_ACCESS: "from-amber-500 to-orange-500",
+};
+
 export default function DashboardOverview() {
   const [stats, setStats] = useState({ posts: 0, scheduled: 0, published: 0, accounts: 0 });
   const [recentPosts, setRecentPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [subPlan, setSubPlan] = useState("FREE");
+  const [subExpiry, setSubExpiry] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -27,9 +43,10 @@ export default function DashboardOverview() {
     if (!token) return;
     const headers = { Authorization: "Bearer " + token };
     try {
-      const [postsRes, accRes] = await Promise.all([
+      const [postsRes, accRes, subRes] = await Promise.all([
         fetch(API + "/posts", { headers }).then((r) => r.json()).catch(() => []),
         fetch(API + "/accounts", { headers }).then((r) => r.json()).catch(() => []),
+        fetch(API + "/subscription", { headers }).then((r) => r.json()).catch(() => ({})),
       ]);
       const posts = Array.isArray(postsRes) ? postsRes : postsRes.posts || [];
       const accounts = Array.isArray(accRes) ? accRes : accRes.accounts || [];
@@ -40,6 +57,11 @@ export default function DashboardOverview() {
         accounts: accounts.length,
       });
       setRecentPosts(posts.slice(0, 5));
+
+      if (subRes.subscription) {
+        setSubPlan(subRes.subscription.plan || "FREE");
+        setSubExpiry(subRes.subscription.currentPeriodEnd || null);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -64,6 +86,47 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-6">
+      {/* Subscription Banner */}
+      {subPlan === "FREE" ? (
+        <div className="bg-gradient-to-r from-amber-500 to-pink-500 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Zap size={20} />
+                <span className="text-sm font-medium opacity-90">Free Plan</span>
+              </div>
+              <p className="text-sm opacity-80">Subscribe to unlock posting, reels, and more features.</p>
+            </div>
+            <Link
+              href="/dashboard/billing"
+              className="px-5 py-2.5 bg-white text-amber-600 rounded-lg text-sm font-semibold hover:bg-amber-50 transition-colors"
+            >
+              View Plans
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className={`bg-gradient-to-r ${PLAN_COLORS[subPlan] || "from-slate-500 to-slate-600"} rounded-xl p-6 text-white`}>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Crown size={20} />
+                <span className="text-sm font-medium opacity-90">{PLAN_NAMES[subPlan] || subPlan} Plan</span>
+              </div>
+              <p className="text-sm opacity-80">
+                {subExpiry ? `Active until ${new Date(subExpiry).toLocaleDateString()}` : "Your subscription is active"}
+              </p>
+            </div>
+            <Link
+              href="/dashboard/billing"
+              className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
+            >
+              Manage
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (

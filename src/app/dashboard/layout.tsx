@@ -14,6 +14,8 @@ import {
   Menu,
   X,
   Bell,
+  Crown,
+  Zap,
 } from "lucide-react";
 
 const nav = [
@@ -31,6 +33,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [subPlan, setSubPlan] = useState("FREE");
 
   useEffect(() => {
     const token = localStorage.getItem("sp_token");
@@ -44,6 +47,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } catch {
       setUser(null);
     }
+
+    // Fetch subscription status
+    fetch("https://smtools.online/api/subscription", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const plan = d.subscription?.plan || "FREE";
+        setSubPlan(plan);
+        localStorage.setItem("sp_subscription", JSON.stringify(d.subscription));
+      })
+      .catch(() => {});
+
     setLoading(false);
   }, [router]);
 
@@ -85,6 +101,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <X size={20} />
           </button>
         </div>
+
+        {/* Plan Badge */}
+        {subPlan !== "FREE" && (
+          <div className="px-4 py-2 border-b border-slate-100">
+            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+              subPlan === "ALL_ACCESS"
+                ? "bg-amber-100 text-amber-700"
+                : subPlan === "REELS"
+                ? "bg-purple-100 text-purple-700"
+                : "bg-blue-100 text-blue-700"
+            }`}>
+              <Crown size={12} />
+              {subPlan === "ALL_ACCESS" ? "All Access" : subPlan === "REELS" ? "Reels" : "Content"}
+            </div>
+          </div>
+        )}
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">

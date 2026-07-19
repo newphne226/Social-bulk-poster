@@ -142,13 +142,17 @@ async function handleRegister(e) {
 async function syncData(token) {
   try {
     const headers = { Authorization: "Bearer " + token };
-    const [postsRes, accountsRes] = await Promise.all([
+    const [postsRes, accountsRes, subRes] = await Promise.all([
       fetch(API + "/posts", { headers }).then(r => r.json()).catch(() => []),
       fetch(API + "/accounts", { headers }).then(r => r.json()).catch(() => []),
+      fetch(API + "/subscription", { headers }).then(r => r.json()).catch(() => ({})),
     ]);
     state.posts = Array.isArray(postsRes) ? postsRes : (postsRes.posts || []);
     state.accounts = Array.isArray(accountsRes) ? accountsRes : (accountsRes.accounts || []);
-    await chrome.storage.local.set({ posts: state.posts, accounts: state.accounts, lastSyncAt: Date.now() });
+    if (subRes.subscription) {
+      state.user.plan = subRes.subscription.plan || "FREE";
+    }
+    await chrome.storage.local.set({ posts: state.posts, accounts: state.accounts, user: state.user, lastSyncAt: Date.now() });
   } catch (e) {
     console.warn("Sync failed", e);
   }
@@ -175,7 +179,9 @@ function updateHeader() {
   const initials = (state.user.name || "U").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
   document.getElementById("user-avatar").textContent = initials;
   document.getElementById("user-name").textContent = state.user.name || state.user.email;
-  document.getElementById("user-plan").textContent = state.user.plan || "Free Plan";
+  const plan = state.user.plan || "FREE";
+  const planNames = { CONTENT: "Content", REELS: "Reels", ALL_ACCESS: "All Access" };
+  document.getElementById("user-plan").textContent = plan === "FREE" ? "Free Plan" : (planNames[plan] || plan) + " Plan";
 }
 
 /* -- Dashboard -- */
@@ -330,7 +336,22 @@ function bindPageEvents() {
 }
 
 /* =================== HANDLERS =================== */
+function hasActivePlan() {
+  const plan = state.user?.plan || "FREE";
+  return plan !== "FREE";
+}
+
+function openBilling() {
+  const path = (state.user?.role === "ADMIN" || state.user?.role === "OWNER") ? "/admin" : "/dashboard";
+  chrome.tabs.create({ url: API.replace(/\/api$/, "") + path + "/billing" });
+}
+
 async function handleSchedule() {
+  if (!hasActivePlan()) {
+    toast("Subscribe to a plan to schedule posts", "err");
+    openBilling();
+    return;
+  }
   const caption = document.getElementById("sch-caption")?.value.trim();
   const time = document.getElementById("sch-time")?.value;
   const selected = document.querySelectorAll("#sch-platforms .chip.on");
@@ -364,6 +385,11 @@ async function handleSchedule() {
 }
 
 async function handleCreatePost(status) {
+  if (!hasActivePlan()) {
+    toast("Subscribe to a plan to create posts", "err");
+    openBilling();
+    return;
+  }
   const caption = document.getElementById("cr-caption")?.value.trim();
   const tags = document.getElementById("cr-tags")?.value.trim();
   const selected = document.querySelectorAll("#cr-platforms .chip.on");

@@ -2,23 +2,56 @@
 // PUT /api/subscription — update (upgrade/downgrade/cancel).
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
+import { db } from "@/lib/db";
 
-// In-memory subscription state for the demo user.
-let SUBSCRIPTION = {
-  plan: "VIP_PRO",
-  status: "ACTIVE",
-  billingCycle: "MONTHLY",
-  currentPeriodStart: "2026-07-01T00:00:00Z",
-  currentPeriodEnd: "2026-08-01T00:00:00Z",
-  cancelAtPeriodEnd: false,
-  canceledAt: null as string | null,
+const PLAN_FEATURES: Record<string, string[]> = {
+  CONTENT: ["content_post", "photo_upload"],
+  REELS: ["reels_upload", "video_upload", "ai_captions"],
+  ALL_ACCESS: ["content_post", "photo_upload", "reels_upload", "video_upload", "ai_captions", "ai_hashtags", "smart_queue", "api_access"],
 };
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
-  return NextResponse.json({ subscription: SUBSCRIPTION });
+  // Check for most recent confirmed crypto payment
+  const lastPayment = await db.cryptoPayment.findFirst({
+    where: { userId: auth.user.id, status: "CONFIRMED" },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (lastPayment) {
+    const plan = lastPayment.plan || "FREE";
+    const created = new Date(lastPayment.createdAt);
+    const expires = new Date(created.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const isActive = now < expires && !lastPayment.metadata?.includes('"canceled":true');
+
+    return NextResponse.json({
+      subscription: {
+        plan,
+        status: isActive ? "ACTIVE" : "EXPIRED",
+        billingCycle: lastPayment.cycle || "MONTHLY",
+        currentPeriodStart: created.toISOString(),
+        currentPeriodEnd: expires.toISOString(),
+        cancelAtPeriodEnd: false,
+        features: PLAN_FEATURES[plan] || [],
+      },
+    });
+  }
+
+  // No subscription — free plan
+  return NextResponse.json({
+    subscription: {
+      plan: "FREE",
+      status: "ACTIVE",
+      billingCycle: null,
+      currentPeriodStart: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      features: [],
+    },
+  });
 }
 
 export async function PUT(request: NextRequest) {
@@ -26,41 +59,31 @@ export async function PUT(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const body = await request.json().catch(() => ({}));
-  const { action, plan, billingCycle } = body ?? {};
+  const { action, plan } = body ?? {};
 
   if (action === "cancel") {
-    SUBSCRIPTION = {
-      ...SUBSCRIPTION,
-      cancelAtPeriodEnd: true,
-      canceledAt: new Date().toISOString(),
-    };
-    return NextResponse.json({
-      subscription: SUBSCRIPTION,
-      message: "Subscription will cancel at the end of the current period.",
+    const lastPayment = await db.cryptoPayment.findFirst({
+      where: { userId: auth.user.id, status: "CONFIRMED" },
+      orderBy: { createdAt: "desc" },
     });
-  }
 
-  if (action === "upgrade" || action === "downgrade") {
-    if (!plan) {
-      return NextResponse.json({ error: "plan is required for upgrade/downgrade." }, { status: 400 });
+    if (lastPayment && lastPayment.metadata) {
+      const meta = JSON.parse(lastPayment.metadata || "{}");
+      meta.canceled = true;
+      await db.cryptoPayment.update({
+        where: { id: lastPayment.id },
+        data: { metadata: JSON.stringify(meta) },
+      });
     }
-    SUBSCRIPTION = {
-      ...SUBSCRIPTION,
-      plan,
-      billingCycle: billingCycle ?? SUBSCRIPTION.billingCycle,
-      cancelAtPeriodEnd: false,
-      canceledAt: null,
-      currentPeriodStart: new Date().toISOString(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 86400000).toISOString(),
-    };
+
     return NextResponse.json({
-      subscription: SUBSCRIPTION,
-      message: `Subscription ${action}ed to ${plan}.`,
+      subscription: { plan: "FREE", status: "CANCELED" },
+      message: "Subscription canceled.",
     });
   }
 
   return NextResponse.json(
-    { error: 'action must be "upgrade", "downgrade", or "cancel".' },
+    { error: 'action must be "cancel".' },
     { status: 400 }
   );
 }

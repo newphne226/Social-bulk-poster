@@ -29,7 +29,7 @@ function SuccessContent() {
           <a href="/" className="flex-1 px-4 py-3 rounded-xl border border-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-800 transition-colors text-center">
             Go Home
           </a>
-          <a href="/admin" className="flex-1 px-4 py-3 rounded-xl bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition-colors flex items-center justify-center gap-2">
+          <a href="/dashboard" className="flex-1 px-4 py-3 rounded-xl bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition-colors flex items-center justify-center gap-2">
             Dashboard <ArrowRight className="h-4 w-4" />
           </a>
         </div>

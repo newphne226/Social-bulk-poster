@@ -41,6 +41,14 @@ export default function PostsPage() {
 
   async function createPost() {
     if (!form.caption.trim()) return;
+
+    // Check subscription
+    const sub = JSON.parse(localStorage.getItem("sp_subscription") || "{}");
+    if (sub.plan === "FREE" || !sub.plan) {
+      window.location.href = "/dashboard/billing";
+      return;
+    }
+
     setCreating(true);
     const token = localStorage.getItem("sp_token");
     try {
