@@ -1,884 +1,437 @@
-// =====================================================================
-// SocialPilot Chrome Extension — Popup Logic (v4 - Complete Rewrite)
-// =====================================================================
-import { getApiBase } from "../lib/config.js";
+/* ===================================================================
+   SocialPilot Extension — Popup Logic (Clean Rewrite)
+   =================================================================== */
 
-let API_BASE = "https://smtools.online/api";
-
+const API = "https://smtools.online/api";
 const PLATFORMS = {
-  facebook: { name: "Facebook", color: "#1877F2", icon: "f" },
-  instagram: { name: "Instagram", color: "#E4405F", icon: "IG" },
-  x: { name: "X", color: "#000000", icon: "X" },
-  linkedin: { name: "LinkedIn", color: "#0A66C2", icon: "in" },
-  pinterest: { name: "Pinterest", color: "#BD081C", icon: "P" },
+  facebook: { name: "Facebook", color: "#1877F2" },
+  instagram: { name: "Instagram", color: "#E4405F" },
+  x: { name: "X", color: "#000000" },
+  linkedin: { name: "LinkedIn", color: "#0A66C2" },
+  pinterest: { name: "Pinterest", color: "#BD081C" },
 };
 
-let state = {
-  user: null,
-  subscription: null,
-  accounts: [],
-  posts: [],
-  notifications: [],
-  settings: { darkMode: false, timezone: "Asia/Dhaka" },
-};
-let currentSection = "dashboard";
+let state = { user: null, posts: [], accounts: [], settings: {} };
+let currentPage = "dashboard";
 
-// ----------------------------------------------------------------------
-// Init
-// ----------------------------------------------------------------------
+/* =================== INIT =================== */
 document.addEventListener("DOMContentLoaded", async () => {
-  API_BASE = await getApiBase();
-  console.log("[SocialPilot] API base:", API_BASE);
-
-  applyDarkMode(await getDarkMode());
-  bindAuthEvents();
-  bindNavEvents();
-  setupPasswordStrength();
-
-  // Fix links to local app
-  const webOrigin = API_BASE.replace(/\/api\/?$/, "");
-  const forgotLink = document.getElementById("forgot-link");
-  if (forgotLink) forgotLink.href = `${webOrigin}/forgot-password`;
-  const termsLink = document.getElementById("terms-link");
-  if (termsLink) termsLink.href = `${webOrigin}/terms`;
-  const privacyLink = document.getElementById("privacy-link");
-  if (privacyLink) privacyLink.href = `${webOrigin}/privacy`;
-
-  const { token } = await chrome.storage.local.get("token");
-  if (token) {
-    showMain();
-    await loadState();
-    renderSection("dashboard");
+  const stored = await chrome.storage.local.get(["token", "user", "accounts", "posts", "settings"]);
+  if (stored.token && stored.user) {
+    state.user = stored.user;
+    state.accounts = stored.accounts || [];
+    state.posts = stored.posts || [];
+    state.settings = stored.settings || {};
+    showScreen("main");
+    renderPage("dashboard");
   } else {
-    showLogin();
+    showScreen("auth");
   }
+  bindEvents();
 });
 
-// ----------------------------------------------------------------------
-// Auth Event Bindings
-// ----------------------------------------------------------------------
-function bindAuthEvents() {
-  // Sign In form
-  const loginForm = document.getElementById("login-form");
-  if (loginForm) loginForm.addEventListener("submit", handleLogin);
-
-  // Sign Up form
-  const signupForm = document.getElementById("signup-form");
-  if (signupForm) signupForm.addEventListener("submit", handleSignup);
-
-  // Google OAuth
-  const googleBtn = document.getElementById("google-btn");
-  if (googleBtn) googleBtn.addEventListener("click", handleGoogleLogin);
-
-  // Tab switcher
-  document.querySelectorAll(".auth-tab").forEach((tab) => {
-    tab.addEventListener("click", () => switchAuthTab(tab.dataset.authTab));
+/* =================== EVENTS =================== */
+function bindEvents() {
+  // Auth tabs
+  document.querySelectorAll(".tab").forEach(t => {
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      t.classList.add("active");
+      document.getElementById("login-form").classList.toggle("hidden", t.dataset.tab !== "login");
+      document.getElementById("register-form").classList.toggle("hidden", t.dataset.tab !== "register");
+      clearErrors();
+    });
   });
 
-  // Inline switch links
-  const goToSignup = document.getElementById("go-to-signup");
-  if (goToSignup) goToSignup.addEventListener("click", () => switchAuthTab("signup"));
-  const goToSignin = document.getElementById("go-to-signin");
-  if (goToSignin) goToSignin.addEventListener("click", () => switchAuthTab("signin"));
+  // Login
+  document.getElementById("login-form").addEventListener("submit", handleLogin);
+  // Register
+  document.getElementById("register-form").addEventListener("submit", handleRegister);
 
-  // Password visibility toggles
-  const togglePw = document.getElementById("toggle-pw");
-  if (togglePw) togglePw.addEventListener("click", () => togglePasswordVisibility("password", "toggle-pw"));
-  const suTogglePw = document.getElementById("su-toggle-pw");
-  if (suTogglePw) suTogglePw.addEventListener("click", () => togglePasswordVisibility("su-password", "su-toggle-pw"));
-
-  // Real-time validation — Sign In
-  const emailInput = document.getElementById("email");
-  if (emailInput) {
-    emailInput.addEventListener("blur", validateEmailField);
-    emailInput.addEventListener("input", clearError("email-error"));
-  }
-  const pwInput = document.getElementById("password");
-  if (pwInput) pwInput.addEventListener("input", clearError("password-error"));
-
-  // Real-time validation — Sign Up
-  const suName = document.getElementById("su-name");
-  if (suName) suName.addEventListener("input", clearError("su-name-error"));
-  const suEmail = document.getElementById("su-email");
-  if (suEmail) {
-    suEmail.addEventListener("blur", () => validateField("su-email", "su-email-error", "email"));
-    suEmail.addEventListener("input", clearError("su-email-error"));
-  }
-  const suPassword = document.getElementById("su-password");
-  if (suPassword) {
-    suPassword.addEventListener("input", () => {
-      clearError("su-password-error")();
-      updatePasswordStrength(suPassword.value);
-      const confirm = document.getElementById("su-confirm");
-      if (confirm && confirm.value) validateField("su-confirm", "su-confirm-error", "confirm");
+  // Bottom nav
+  document.querySelectorAll(".nav-item").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".nav-item").forEach(x => x.classList.remove("active"));
+      btn.classList.add("active");
+      renderPage(btn.dataset.page);
     });
-  }
-  const suConfirm = document.getElementById("su-confirm");
-  if (suConfirm) suConfirm.addEventListener("input", clearError("su-confirm-error"));
-}
-
-function bindNavEvents() {
-  // Nav rail
-  document.querySelectorAll(".nav-btn[data-section]").forEach((btn) => {
-    btn.addEventListener("click", () => renderSection(btn.dataset.section));
   });
 
   // Open dashboard
-  const openDash = document.getElementById("open-dashboard");
-  if (openDash) openDash.addEventListener("click", () => chrome.runtime.sendMessage({ type: "OPEN_DASHBOARD" }));
-
-  // Header logout
-  const logoutBtn = document.getElementById("logout-btn");
-  if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
-}
-
-// ----------------------------------------------------------------------
-// Auth Tab Switching
-// ----------------------------------------------------------------------
-function switchAuthTab(which) {
-  document.querySelectorAll(".auth-tab").forEach((t) => {
-    const active = t.dataset.authTab === which;
-    t.classList.toggle("active", active);
-    t.setAttribute("aria-selected", active ? "true" : "false");
-  });
-  document.querySelectorAll(".auth-panel").forEach((p) => {
-    p.classList.toggle("hidden", p.id !== `${which}-panel`);
+  document.getElementById("btn-open-dash").addEventListener("click", () => {
+    chrome.tabs.create({ url: API.replace(/\/api$/, "") + "/admin" });
   });
 }
 
-// ----------------------------------------------------------------------
-// Password Visibility
-// ----------------------------------------------------------------------
-function togglePasswordVisibility(inputId, btnId) {
-  const input = document.getElementById(inputId);
-  const btn = document.getElementById(btnId);
-  if (!input || !btn) return;
-  if (input.type === "password") {
-    input.type = "text";
-    btn.setAttribute("aria-label", "Hide password");
-    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
-  } else {
-    input.type = "password";
-    btn.setAttribute("aria-label", "Show password");
-    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
-  }
-}
-
-// ----------------------------------------------------------------------
-// Password Strength Meter
-// ----------------------------------------------------------------------
-function setupPasswordStrength() {
-  const suPassword = document.getElementById("su-password");
-  if (suPassword) {
-    suPassword.addEventListener("input", () => updatePasswordStrength(suPassword.value));
-  }
-}
-
-function updatePasswordStrength(password) {
-  const bar = document.querySelector(".strength-bar span");
-  const text = document.querySelector(".strength-text");
-  if (!bar || !text) return;
-
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[a-z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^A-Za-z0-9]/.test(password)) score++;
-
-  const labels = ["Very Weak", "Weak", "Fair", "Strong", "Very Strong"];
-  const colors = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#22c55e"];
-  const widths = ["20%", "40%", "60%", "80%", "100%"];
-
-  if (password.length === 0) {
-    bar.style.width = "0%";
-    bar.style.background = "#e5e7eb";
-    text.textContent = "";
-    return;
-  }
-
-  bar.style.width = widths[score - 1];
-  bar.style.background = colors[score - 1];
-  text.textContent = labels[score - 1];
-  text.style.color = colors[score - 1];
-}
-
-// ----------------------------------------------------------------------
-// Validation
-// ----------------------------------------------------------------------
-function clearError(id) {
-  return () => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = "";
-  };
-}
-
-function validateEmailField() {
-  return validateField("email", "email-error", "email");
-}
-
-function validatePasswordField() {
-  return validateField("password", "password-error", "password");
-}
-
-function validateField(inputId, errorId, kind) {
-  const input = document.getElementById(inputId);
-  const errEl = document.getElementById(errorId);
-  if (!input || !errEl) return false;
-
-  const value = input.value.trim();
-
-  if (kind === "email") {
-    if (!value) { errEl.textContent = "Email is required"; return false; }
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!re.test(value)) { errEl.textContent = "Enter a valid email address"; return false; }
-    errEl.textContent = "";
-    return true;
-  }
-
-  if (kind === "password") {
-    if (!value) { errEl.textContent = "Password is required"; return false; }
-    if (value.length < 6) { errEl.textContent = "Password must be at least 6 characters"; return false; }
-    errEl.textContent = "";
-    return true;
-  }
-
-  if (kind === "name") {
-    if (!value) { errEl.textContent = "Name is required"; return false; }
-    if (value.length < 2) { errEl.textContent = "Name must be at least 2 characters"; return false; }
-    errEl.textContent = "";
-    return true;
-  }
-
-  if (kind === "confirm") {
-    const original = document.getElementById("su-password")?.value || document.getElementById("password")?.value || "";
-    if (!value) { errEl.textContent = "Please confirm your password"; return false; }
-    if (!original) { errEl.textContent = "Please enter your password first"; return false; }
-    if (value !== original) { errEl.textContent = "Passwords do not match"; return false; }
-    errEl.textContent = "";
-    return true;
-  }
-
-  return true;
-}
-
-// ----------------------------------------------------------------------
-// Sign In Handler
-// ----------------------------------------------------------------------
+/* =================== AUTH =================== */
 async function handleLogin(e) {
   e.preventDefault();
-
-  const emailOk = validateEmailField();
-  const pwOk = validatePasswordField();
-  if (!emailOk || !pwOk) return;
-
-  if (!navigator.onLine) {
-    showToast("You're offline. Check your connection.", "error");
-    return;
-  }
-
+  const email = document.getElementById("login-email").value.trim();
+  const pass = document.getElementById("login-pass").value;
+  const remember = document.getElementById("login-remember").checked;
   const btn = document.getElementById("login-btn");
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-  const remember = document.getElementById("remember-me").checked;
+  const errEl = document.getElementById("login-error");
 
-  setBtnLoading(btn, true);
+  if (!email || !pass) { errEl.textContent = "Fill in all fields"; return; }
+  btn.disabled = true; btn.textContent = "Signing in..."; errEl.textContent = "";
 
   try {
-    const res = await fetch(`${API_BASE}/auth/login`, {
+    const res = await fetch(API + "/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, remember }),
+      body: JSON.stringify({ email, password: pass, remember }),
     });
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Login failed");
 
-    if (!res.ok || data.ok === false) {
-      const error = data.error || `Login failed (${res.status})`;
-      if (data.approvalRequired) {
-        showToast("Your account is awaiting admin approval. Please try again later.", "warning");
-        return;
-      }
-      throw new Error(error);
-    }
-
-    // Save token + user to chrome.storage so background worker can pick them up
     await chrome.storage.local.set({ token: data.token, user: data.user, subscription: data.subscription });
-
-    showMain();
-    await loadState();
-    renderSection("dashboard");
-    showToast("Welcome back!", "success");
-  } catch (err) {
-    const msg = String(err.message || err);
-    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
-      showToast("Can't reach server. Check your internet.", "error");
-    } else if (msg.includes("401") || msg.toLowerCase().includes("unauthorized")) {
-      showToast("Invalid email or password.", "error");
-      document.getElementById("password-error").textContent = "Check your credentials";
-    } else {
-      showToast(msg || "Login failed.", "error");
-    }
-  } finally {
-    setBtnLoading(btn, false);
-  }
-}
-
-async function handleGoogleLogin() {
-  await chrome.tabs.create({
-    url: `${API_BASE.replace(/\/api$/, "")}/login?from=extension&provider=google`,
-  });
-  showToast("Complete Google sign-in in the new tab", "info");
-}
-
-// ----------------------------------------------------------------------
-// Sign Up Handler
-// ----------------------------------------------------------------------
-async function handleSignup(e) {
-  e.preventDefault();
-
-  const nameOk = validateField("su-name", "su-name-error", "name");
-  const emailOk = validateField("su-email", "su-email-error", "email");
-  const pwOk = validateField("su-password", "su-password-error", "password");
-  const confirmOk = validateField("su-confirm", "su-confirm-error", "confirm");
-
-  const termsCheck = document.getElementById("su-terms");
-  const termsError = document.getElementById("su-terms-error");
-  if (!termsCheck?.checked) {
-    if (termsError) termsError.textContent = "You must agree to the Terms to continue";
-    return;
-  }
-  if (termsError) termsError.textContent = "";
-
-  if (!nameOk || !emailOk || !pwOk || !confirmOk) return;
-
-  if (!navigator.onLine) {
-    showToast("You're offline. Check your connection.", "error");
-    return;
-  }
-
-  const btn = document.getElementById("signup-btn");
-  const name = document.getElementById("su-name").value.trim();
-  const email = document.getElementById("su-email").value.trim();
-  const password = document.getElementById("su-password").value;
-
-  setBtnLoading(btn, true);
-
-  try {
-    const res = await fetch(`${API_BASE}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, remember: true }),
-    });
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok || data.ok === false) {
-      throw new Error(data.error || `Registration failed (${res.status})`);
-    }
-
-    // Save token + user to chrome.storage so background worker can pick them up
-    await chrome.storage.local.set({ token: data.token, user: data.user, subscription: data.subscription });
-
-    showMain();
-    await loadState();
-    renderSection("dashboard");
-    showToast(`Welcome, ${name.split(" ")[0]}! Your account is pending admin approval. You'll be notified once approved.`, "success");
-  } catch (err) {
-    const msg = String(err.message || err);
-    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
-      showToast("Can't reach server. Is the app running?", "error");
-    } else if (msg.includes("409") || msg.toLowerCase().includes("already exists")) {
-      document.getElementById("su-email-error").textContent = "An account with this email already exists";
-      showToast("Email already registered. Try signing in.", "error");
-    } else {
-      showToast(msg || "Registration failed.", "error");
-    }
-  } finally {
-    setBtnLoading(btn, false);
-  }
-}
-
-// ----------------------------------------------------------------------
-// Logout
-// ----------------------------------------------------------------------
-async function handleLogout() {
-  if (!confirm("Log out of SocialPilot?")) return;
-  await chrome.storage.local.remove([
-    "token", "refreshToken", "user", "accounts", "posts",
-    "notifications", "subscription", "settings", "lastSyncAt",
-    "tokenExpiresAt",
-  ]);
-  try { await chrome.action.setBadgeText({ text: "" }); } catch {}
-  showLogin();
-}
-
-function setBtnLoading(btn, loading) {
-  if (!btn) return;
-  btn.disabled = loading;
-  const text = btn.querySelector(".btn-text");
-  const loader = btn.querySelector(".btn-loader");
-  if (text) text.style.display = loading ? "none" : "inline";
-  if (loader) loader.style.display = loading ? "inline-flex" : "none";
-}
-
-// ----------------------------------------------------------------------
-// Message Helper
-// ----------------------------------------------------------------------
-function sendMessage(message, timeoutMs = 15000) {
-  return new Promise((resolve) => {
-    let resolved = false;
-    const timer = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        resolve({ ok: false, error: "Timeout — background worker may be inactive" });
-      }
-    }, timeoutMs);
-
-    try {
-      chrome.runtime.sendMessage(message, (response) => {
-        if (resolved) return;
-        resolved = true;
-        clearTimeout(timer);
-        if (chrome.runtime.lastError) {
-          resolve({ ok: false, error: chrome.runtime.lastError.message });
-          return;
-        }
-        resolve(response ?? { ok: false, error: "No response from background" });
-      });
-    } catch (e) {
-      if (!resolved) {
-        resolved = true;
-        clearTimeout(timer);
-        resolve({ ok: false, error: String(e) });
-      }
-    }
-  });
-}
-
-// ----------------------------------------------------------------------
-// State Management
-// ----------------------------------------------------------------------
-async function loadState() {
-  try {
-    const data = await chrome.storage.local.get([
-      "token", "user", "subscription", "accounts", "posts",
-      "notifications", "settings",
-    ]);
-    if (!data.token) {
-      console.warn("[SocialPilot] No token found — not authenticated");
-      return;
-    }
     state.user = data.user;
-    state.subscription = data.subscription;
-    state.accounts = data.accounts || [];
-    state.posts = data.posts || [];
-    state.notifications = data.notifications || [];
-    state.settings = { ...state.settings, ...(data.settings || {}) };
+    await syncData(data.token);
+    showScreen("main");
+    renderPage("dashboard");
+    toast("Welcome back!", "ok");
   } catch (err) {
-    console.warn("[SocialPilot] loadState failed:", err);
+    errEl.textContent = err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = "Sign In";
   }
-  updateUserHeader();
-  updateNotifBadge();
 }
 
-function updateUserHeader() {
+async function handleRegister(e) {
+  e.preventDefault();
+  const name = document.getElementById("reg-name").value.trim();
+  const email = document.getElementById("reg-email").value.trim();
+  const pass = document.getElementById("reg-pass").value;
+  const confirm = document.getElementById("reg-confirm").value;
+  const terms = document.getElementById("reg-terms").checked;
+  const btn = document.getElementById("reg-btn");
+  const errEl = document.getElementById("reg-error");
+
+  if (!name || !email || !pass) { errEl.textContent = "All fields are required"; return; }
+  if (pass.length < 6) { errEl.textContent = "Password must be at least 6 characters"; return; }
+  if (pass !== confirm) { errEl.textContent = "Passwords do not match"; return; }
+  if (!terms) { errEl.textContent = "You must agree to the terms"; return; }
+
+  btn.disabled = true; btn.textContent = "Creating..."; errEl.textContent = "";
+
+  try {
+    const res = await fetch(API + "/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password: pass, remember: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Registration failed");
+
+    await chrome.storage.local.set({ token: data.token, user: data.user, subscription: data.subscription });
+    state.user = data.user;
+    await syncData(data.token);
+    showScreen("main");
+    renderPage("dashboard");
+    toast("Account created! Pending admin approval.", "info");
+  } catch (err) {
+    errEl.textContent = err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = "Create Account";
+  }
+}
+
+/* =================== DATA SYNC =================== */
+async function syncData(token) {
+  try {
+    const headers = { Authorization: "Bearer " + token };
+    const [postsRes, accountsRes] = await Promise.all([
+      fetch(API + "/posts", { headers }).then(r => r.json()).catch(() => []),
+      fetch(API + "/accounts", { headers }).then(r => r.json()).catch(() => []),
+    ]);
+    state.posts = Array.isArray(postsRes) ? postsRes : (postsRes.posts || []);
+    state.accounts = Array.isArray(accountsRes) ? accountsRes : (accountsRes.accounts || []);
+    await chrome.storage.local.set({ posts: state.posts, accounts: state.accounts, lastSyncAt: Date.now() });
+  } catch (e) {
+    console.warn("Sync failed", e);
+  }
+}
+
+/* =================== SCREENS =================== */
+function showScreen(name) {
+  document.getElementById("auth-screen").classList.toggle("active", name === "auth");
+  document.getElementById("main-screen").classList.toggle("active", name === "main");
+}
+
+/* =================== PAGES =================== */
+function renderPage(page) {
+  currentPage = page;
+  const el = document.getElementById("main-content");
+  const renderers = { dashboard: renderDashboard, schedule: renderSchedule, create: renderCreate, queue: renderQueue, settings: renderSettings };
+  el.innerHTML = (renderers[page] || renderDashboard)();
+  bindPageEvents();
+  updateHeader();
+}
+
+function updateHeader() {
   if (!state.user) return;
-  const avatar = document.getElementById("user-avatar");
-  const name = document.getElementById("user-name");
-  const plan = document.getElementById("user-plan");
-  if (avatar) avatar.src = state.user.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(state.user.name || state.user.email)}`;
-  if (name) name.textContent = state.user.name || state.user.email;
-  if (plan) plan.textContent = state.subscription?.plan || "Free";
+  const initials = (state.user.name || "U").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+  document.getElementById("user-avatar").textContent = initials;
+  document.getElementById("user-name").textContent = state.user.name || state.user.email;
+  document.getElementById("user-plan").textContent = state.user.plan || "Free Plan";
 }
 
-function updateNotifBadge() {
-  const unread = state.notifications.filter((n) => !n.isRead).length;
-  const badge = document.getElementById("notif-badge");
-  if (!badge) return;
-  if (unread > 0) {
-    badge.textContent = unread > 9 ? "9+" : unread;
-    badge.classList.remove("hidden");
-  } else {
-    badge.classList.add("hidden");
-  }
-}
-
-// ----------------------------------------------------------------------
-// Section Rendering
-// ----------------------------------------------------------------------
-function renderSection(section) {
-  currentSection = section;
-  document.querySelectorAll(".nav-btn[data-section]").forEach((b) =>
-    b.classList.toggle("active", b.dataset.section === section)
-  );
-  const content = document.getElementById("content");
-  if (!content) return;
-
-  const renderers = {
-    dashboard: renderDashboard,
-    quick: renderQuick,
-    create: renderCreate,
-    drafts: renderDrafts,
-    media: renderMedia,
-    queue: renderQueue,
-    notifications: renderNotifications,
-    settings: renderSettings,
-  };
-
-  content.innerHTML = (renderers[section] || renderDashboard)();
-  attachSectionHandlers();
-}
-
+/* -- Dashboard -- */
 function renderDashboard() {
-  const scheduledToday = state.posts.filter((p) => p.status === "SCHEDULED").length;
-  const publishedToday = state.posts.filter((p) => p.status === "PUBLISHED").length;
-  const totalFollowers = state.accounts.reduce((sum, a) => sum + (a.followerCount || 0), 0);
-
+  const scheduled = state.posts.filter(p => p.status === "SCHEDULED").length;
+  const published = state.posts.filter(p => p.status === "PUBLISHED").length;
   return `
     <div class="card">
-      <div class="greeting">Hey ${escapeHtml(state.user?.name?.split(" ")[0] || "there")} 👋</div>
-      <div class="greeting-sub">You have ${scheduledToday} posts scheduled today</div>
-      <div class="stats-grid">
-        <div class="stat"><div class="stat-label">Followers</div><div class="stat-value">${formatNum(totalFollowers)}</div></div>
-        <div class="stat"><div class="stat-label">Posts today</div><div class="stat-value">${publishedToday}</div></div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);">Hey ${esc((state.user?.name || "there").split(" ")[0])} 👋</div>
+      <div style="font-size:12px;color:var(--text3);margin:4px 0 12px;">You have ${scheduled} posts scheduled</div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-label">Scheduled</div><div class="stat-value">${scheduled}</div></div>
+        <div class="stat-box"><div class="stat-label">Published</div><div class="stat-value">${published}</div></div>
       </div>
     </div>
     <div class="card">
-      <div class="section-title">Quick Actions</div>
-      <div class="quick-actions">
-        <button class="quick-action" data-action="quick">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Quick
-        </button>
-        <button class="quick-action" data-action="create">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Create
-        </button>
-        <button class="quick-action" data-action="ai">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          AI
-        </button>
+      <div class="card-title">Quick Actions</div>
+      <div class="actions-row">
+        <button class="action-btn" data-goto="schedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Schedule</button>
+        <button class="action-btn" data-goto="create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Create</button>
+        <button class="action-btn" data-goto="queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>Queue</button>
       </div>
     </div>
-    <div class="section-title">Coming up next</div>
-    ${state.posts.filter((p) => p.status === "SCHEDULED").slice(0, 3).map(renderPostItem).join("") || emptyState("No posts scheduled")}
+    <div class="card-title">Recent Posts</div>
+    ${state.posts.slice(0, 5).map(renderPost).join("") || emptyHtml("No posts yet. Create your first post!")}
   `;
 }
 
-function renderQuick() {
-  if (!state.accounts.length) return emptyState("Connect a social account first");
+/* -- Schedule (Quick) -- */
+function renderSchedule() {
+  if (!state.accounts.length) return emptyHtml("Connect a social account first from the dashboard.");
   return `
-    <div class="section-title">Quick Schedule</div>
+    <div class="card-title">Quick Schedule</div>
     <div class="card">
-      <label for="quick-caption" class="form-label">Caption</label>
-      <textarea id="quick-caption" class="form-textarea" placeholder="What's on your mind?"></textarea>
-      <label for="quick-account" class="form-label">Account</label>
-      <select id="quick-account" class="form-select">
-        ${state.accounts.map((a) => `<option value="${a.id}">${escapeHtml(PLATFORMS[a.platform]?.name || a.platform)} · ${escapeHtml(a.displayName)}</option>`).join("")}
-      </select>
-      <label for="quick-time" class="form-label">Schedule for</label>
-      <input type="datetime-local" id="quick-time" class="form-input" />
+      <label class="form-label">Caption</label>
+      <textarea class="form-textarea" id="sch-caption" placeholder="What's on your mind?"></textarea>
+      <label class="form-label">Platform</label>
+      <div class="chips" id="sch-platforms">
+        ${state.accounts.map(a => `<div class="chip" data-acc="${a.id}" data-plat="${a.platform}"><span class="chip-dot" style="background:${PLATFORMS[a.platform]?.color || '#888'}"></span>${esc(a.displayName || a.platform)}</div>`).join("")}
+      </div>
+      <label class="form-label">Schedule for</label>
+      <input type="datetime-local" class="form-input" id="sch-time" />
       <div class="btn-row">
-        <button class="btn btn-primary btn-block" id="quick-schedule-btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); border: none;">Schedule</button>
+        <button class="btn-primary" id="sch-btn" style="background:linear-gradient(135deg,#f59e0b,#ec4899);border:none;">Schedule</button>
       </div>
     </div>
   `;
 }
 
+/* -- Create Post -- */
 function renderCreate() {
-  if (!state.accounts.length) return emptyState("Connect a social account first");
+  if (!state.accounts.length) return emptyHtml("Connect a social account first.");
   return `
-    <div class="section-title">Create Post</div>
+    <div class="card-title">Create Post</div>
     <div class="card">
-      <label for="create-caption" class="form-label">Caption</label>
-      <textarea id="create-caption" class="form-textarea" placeholder="Write your post..."></textarea>
-      <label class="form-label">Media</label>
-      <div class="media-drop" id="create-drop">
-        Click or drop files here
-      </div>
+      <label class="form-label">Caption</label>
+      <textarea class="form-textarea" id="cr-caption" placeholder="Write your post..."></textarea>
+      <label class="form-label">Hashtags</label>
+      <input type="text" class="form-input" id="cr-tags" placeholder="#socialmedia #marketing" />
       <label class="form-label">Post to</label>
-      <div class="platform-chips" id="create-platforms">
-        ${state.accounts.map((a) => `
-          <div class="platform-chip" data-account="${a.id}">
-            <span class="pdot" style="background: ${PLATFORMS[a.platform]?.color || '#888'}"></span>
-            ${escapeHtml(a.displayName)}
-          </div>
-        `).join("")}
+      <div class="chips" id="cr-platforms">
+        ${state.accounts.map(a => `<div class="chip" data-acc="${a.id}" data-plat="${a.platform}"><span class="chip-dot" style="background:${PLATFORMS[a.platform]?.color || '#888'}"></span>${esc(a.displayName || a.platform)}</div>`).join("")}
       </div>
-      <label for="create-hashtags" class="form-label">Hashtags</label>
-      <input type="text" id="create-hashtags" class="form-input" placeholder="#socialmedia #marketing" />
       <div class="btn-row">
-        <button class="btn btn-secondary" id="create-draft-btn">Save Draft</button>
-        <button class="btn btn-primary" id="create-schedule-btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); border: none;">Schedule</button>
+        <button class="btn-secondary" id="cr-draft">Save Draft</button>
+        <button class="btn-primary" id="cr-post" style="background:linear-gradient(135deg,#f59e0b,#ec4899);border:none;">Post Now</button>
       </div>
     </div>
   `;
 }
 
-function renderDrafts() {
-  const drafts = state.posts.filter((p) => p.status === "DRAFT");
-  return `
-    <div class="section-title">Drafts (${drafts.length})</div>
-    ${drafts.map(renderPostItem).join("") || emptyState("No drafts yet")}
-  `;
-}
-
-function renderMedia() {
-  return `
-    <div class="section-title">Media Library</div>
-    <div class="card">
-      <div class="media-grid">
-        ${[1,2,3,4,5,6].map((i) => `<img src="https://picsum.photos/seed/ext${i}/100/100" alt="" />`).join("")}
-      </div>
-      <button class="btn btn-secondary" style="margin-top: 8px; width: 100%;">Upload more</button>
-    </div>
-  `;
-}
-
+/* -- Queue -- */
 function renderQueue() {
-  const queued = state.posts
-    .filter((p) => p.status === "SCHEDULED" || p.status === "QUEUED")
-    .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
+  const queued = state.posts.filter(p => p.status === "SCHEDULED" || p.status === "QUEUED").sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
   return `
-    <div class="section-title">Schedule Queue (${queued.length})</div>
-    ${queued.map(renderPostItem).join("") || emptyState("Queue is empty")}
+    <div class="card-title">Schedule Queue (${queued.length})</div>
+    ${queued.map(renderPost).join("") || emptyHtml("Queue is empty")}
   `;
 }
 
-function renderNotifications() {
-  return `
-    <div class="section-title">Notifications</div>
-    ${state.notifications.map((n) => `
-      <div class="notif-item ${!n.isRead ? "unread" : ""}">
-        <div class="notif-icon ${n.type === "POST_FAILED" ? "failed" : n.type === "POST_PUBLISHED" ? "success" : "info"}">
-          ${n.type === "POST_FAILED" ? "!" : n.type === "POST_PUBLISHED" ? "✓" : "i"}
-        </div>
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 12px; font-weight: 600;">${escapeHtml(n.title)}</div>
-          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${escapeHtml(n.body)}</div>
-          <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px;">${timeAgo(n.createdAt)}</div>
-        </div>
-      </div>
-    `).join("") || emptyState("No notifications")}
-  `;
-}
-
+/* -- Settings -- */
 function renderSettings() {
   return `
-    <div class="section-title">Settings</div>
+    <div class="card-title">Settings</div>
     <div class="card">
       <div class="toggle-row">
-        <div>
-          <div style="font-size: 12px; font-weight: 600;">Dark Mode</div>
-          <div style="font-size: 10px; color: var(--text-muted);">Toggle dark theme for the popup</div>
-        </div>
-        <div class="toggle ${state.settings.darkMode ? "on" : ""}" id="dark-toggle" role="switch" aria-checked="${state.settings.darkMode}"></div>
+        <div><div class="toggle-label">Dark Mode</div><div class="toggle-desc">Toggle dark theme</div></div>
+        <div class="toggle ${state.settings.darkMode ? 'on' : ''}" id="set-dark"></div>
       </div>
       <div class="toggle-row">
-        <div>
-          <div style="font-size: 12px; font-weight: 600;">Timezone</div>
-          <div style="font-size: 10px; color: var(--text-muted);">For scheduling display</div>
-        </div>
+        <div><div class="toggle-label">Auto-sync</div><div class="toggle-desc">Sync posts every 5 min</div></div>
+        <div class="toggle ${state.settings.autoSync !== false ? 'on' : ''}" id="set-sync"></div>
       </div>
-      <select id="tz-select" class="form-select">
-        <option value="Asia/Dhaka" ${state.settings.timezone === "Asia/Dhaka" ? "selected" : ""}>Asia/Dhaka (UTC+6)</option>
-        <option value="America/New_York" ${state.settings.timezone === "America/New_York" ? "selected" : ""}>America/New_York (UTC-5)</option>
-        <option value="Europe/London" ${state.settings.timezone === "Europe/London" ? "selected" : ""}>Europe/London (UTC+0)</option>
-        <option value="Asia/Tokyo" ${state.settings.timezone === "Asia/Tokyo" ? "selected" : ""}>Asia/Tokyo (UTC+9)</option>
-      </select>
       <div class="toggle-row">
-        <div>
-          <div style="font-size: 12px; font-weight: 600;">Auto-sync</div>
-          <div style="font-size: 10px; color: var(--text-muted);">Sync every 5 minutes</div>
-        </div>
-        <div class="toggle on" id="sync-toggle" role="switch" aria-checked="true"></div>
+        <div><div class="toggle-label">Desktop Notifications</div><div class="toggle-desc">Get notified on post status</div></div>
+        <div class="toggle ${state.settings.notif !== false ? 'on' : ''}" id="set-notif"></div>
       </div>
     </div>
     <div class="card">
-      <div style="font-size: 11px; color: var(--text-muted);">Account</div>
-      <div style="font-size: 13px; font-weight: 600; margin-top: 4px;">${escapeHtml(state.user?.email || "—")}</div>
-      <button class="btn btn-secondary" id="logout-full-btn" style="margin-top: 10px; width: 100%; color: var(--danger);">Log out</button>
+      <div class="card-title">Account</div>
+      <div style="font-size:13px;color:var(--text);margin-bottom:4px;">${esc(state.user?.email || "—")}</div>
+      <div style="font-size:11px;color:var(--text3);">Plan: ${esc(state.user?.plan || "Free")}</div>
+      <button class="btn-secondary" id="set-logout" style="margin-top:10px;color:var(--red);width:100%;">Log Out</button>
     </div>
   `;
 }
 
-function renderPostItem(p) {
-  const plat = PLATFORMS[p.platform] || { color: "#888", icon: "?" };
-  return `
-    <div class="post-item">
-      <div class="post-icon" style="background: ${plat.color}">${plat.icon}</div>
-      <div class="post-content">
-        <div class="post-meta">${escapeHtml(p.accountUsername || "")} <span class="status-badge status-${p.status}">${p.status}</span></div>
-        <div class="post-caption">${escapeHtml(p.caption)}</div>
-        ${p.scheduledAt ? `<div class="post-time">⏰ ${new Date(p.scheduledAt).toLocaleString()}</div>` : ""}
-      </div>
-    </div>
-  `;
+/* =================== PAGE EVENT BINDINGS =================== */
+function bindPageEvents() {
+  // Quick action goto
+  document.querySelectorAll("[data-goto]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".nav-item").forEach(x => {
+        x.classList.toggle("active", x.dataset.page === btn.dataset.goto);
+      });
+      renderPage(btn.dataset.goto);
+    });
+  });
+
+  // Chip toggle
+  document.querySelectorAll(".chip[data-acc]").forEach(c => {
+    c.addEventListener("click", () => c.classList.toggle("on"));
+  });
+
+  // Schedule
+  const schBtn = document.getElementById("sch-btn");
+  if (schBtn) schBtn.addEventListener("click", handleSchedule);
+
+  // Create
+  const crPost = document.getElementById("cr-post");
+  if (crPost) crPost.addEventListener("click", () => handleCreatePost("PUBLISHED"));
+  const crDraft = document.getElementById("cr-draft");
+  if (crDraft) crDraft.addEventListener("click", () => handleCreatePost("DRAFT"));
+
+  // Settings toggles
+  ["set-dark", "set-sync", "set-notif"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("click", () => {
+      el.classList.toggle("on");
+      if (id === "set-dark") { state.settings.darkMode = el.classList.contains("on"); applyDark(); }
+      if (id === "set-sync") state.settings.autoSync = el.classList.contains("on");
+      if (id === "set-notif") state.settings.notif = el.classList.contains("on");
+      chrome.storage.local.set({ settings: state.settings });
+    });
+  });
+
+  // Logout
+  const loBtn = document.getElementById("set-logout");
+  if (loBtn) loBtn.addEventListener("click", handleLogout);
+
+  applyDark();
 }
 
-function emptyState(msg) {
-  return `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/></svg><div>${escapeHtml(msg)}</div></div>`;
-}
-
-// ----------------------------------------------------------------------
-// Section Handlers
-// ----------------------------------------------------------------------
-function attachSectionHandlers() {
-  // Dashboard quick actions
-  document.querySelectorAll(".quick-action").forEach((b) => {
-    b.addEventListener("click", () => renderSection(b.dataset.action));
-  });
-
-  // Quick schedule
-  const qsBtn = document.getElementById("quick-schedule-btn");
-  if (qsBtn) qsBtn.addEventListener("click", handleQuickSchedule);
-
-  // Create post
-  const csBtn = document.getElementById("create-schedule-btn");
-  if (csBtn) csBtn.addEventListener("click", () => handleCreatePost(false));
-  const cdBtn = document.getElementById("create-draft-btn");
-  if (cdBtn) cdBtn.addEventListener("click", () => handleCreatePost(true));
-  document.querySelectorAll("#create-platforms .platform-chip").forEach((c) => {
-    c.addEventListener("click", () => c.classList.toggle("selected"));
-  });
-
-  // Settings
-  const dt = document.getElementById("dark-toggle");
-  if (dt) dt.addEventListener("click", handleDarkToggle);
-  const st = document.getElementById("sync-toggle");
-  if (st) st.addEventListener("click", () => {
-    st.classList.toggle("on");
-    st.setAttribute("aria-checked", st.classList.contains("on"));
-  });
-  const tz = document.getElementById("tz-select");
-  if (tz) tz.addEventListener("change", async (e) => {
-    state.settings.timezone = e.target.value;
-    await chrome.storage.local.set({ settings: state.settings });
-    showToast("Timezone updated", "success");
-  });
-  const lo = document.getElementById("logout-full-btn");
-  if (lo) lo.addEventListener("click", handleLogout);
-}
-
-async function handleQuickSchedule() {
-  const caption = document.getElementById("quick-caption").value.trim();
-  const accountId = document.getElementById("quick-account").value;
-  const time = document.getElementById("quick-time").value;
-  if (!caption) return showToast("Caption required", "error");
-  if (!accountId) return showToast("Select an account", "error");
-  if (!time) return showToast("Schedule time required", "error");
+/* =================== HANDLERS =================== */
+async function handleSchedule() {
+  const caption = document.getElementById("sch-caption")?.value.trim();
+  const time = document.getElementById("sch-time")?.value;
+  const selected = document.querySelectorAll("#sch-platforms .chip.on");
+  if (!caption) return toast("Caption is required", "err");
+  if (!time) return toast("Schedule time is required", "err");
+  if (!selected.length) return toast("Select at least one platform", "err");
 
   const scheduledAt = new Date(time).toISOString();
-  if (new Date(scheduledAt) <= new Date()) return showToast("Schedule time must be in the future", "error");
+  if (new Date(scheduledAt) <= new Date()) return toast("Time must be in the future", "err");
 
-  showLoading(true);
+  const btn = document.getElementById("sch-btn");
+  btn.disabled = true; btn.textContent = "Scheduling...";
+
   try {
-    const res = await sendMessage({
-      type: "SCHEDULE_POST",
-      payload: { caption, accountId, scheduledAt },
-    });
-    if (res?.ok === false) throw new Error(res.error);
-    showToast("Post scheduled!", "success");
-    await loadState();
-    renderSection("dashboard");
+    const token = (await chrome.storage.local.get("token")).token;
+    for (const chip of selected) {
+      await fetch(API + "/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ caption, platform: chip.dataset.plat, accountId: chip.dataset.acc, scheduledAt, status: "SCHEDULED" }),
+      });
+    }
+    await syncData(token);
+    toast("Post scheduled!", "ok");
+    renderPage("dashboard");
   } catch (e) {
-    showToast("Failed to schedule: " + (e.message || e), "error");
+    toast("Schedule failed: " + e.message, "err");
   } finally {
-    showLoading(false);
+    btn.disabled = false; btn.textContent = "Schedule";
   }
 }
 
-async function handleCreatePost(asDraft = false) {
-  const caption = document.getElementById("create-caption").value.trim();
-  const hashtags = document.getElementById("create-hashtags").value.trim();
-  const selected = Array.from(document.querySelectorAll("#create-platforms .platform-chip.selected"))
-    .map((c) => c.dataset.account);
-  if (!caption) return showToast("Caption required", "error");
-  if (selected.length === 0 && !asDraft) return showToast("Select at least one account", "error");
+async function handleCreatePost(status) {
+  const caption = document.getElementById("cr-caption")?.value.trim();
+  const tags = document.getElementById("cr-tags")?.value.trim();
+  const selected = document.querySelectorAll("#cr-platforms .chip.on");
+  if (!caption) return toast("Caption is required", "err");
+  if (!selected.length) return toast("Select at least one platform", "err");
 
-  showLoading(true);
+  const fullCaption = tags ? caption + "\n\n" + tags : caption;
+
   try {
-    const type = asDraft ? "CREATE_POST" : "SCHEDULE_POST";
-    const res = await sendMessage({
-      type,
-      payload: {
-        caption,
-        hashtags: hashtags.split(/\s+/).filter(Boolean),
-        accountIds: selected,
-        status: asDraft ? "DRAFT" : "SCHEDULED",
-      },
-    });
-    if (res?.ok === false) throw new Error(res.error);
-    showToast(asDraft ? "Draft saved" : "Post scheduled!", "success");
-    renderSection("dashboard");
+    const token = (await chrome.storage.local.get("token")).token;
+    for (const chip of selected) {
+      await fetch(API + "/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ caption: fullCaption, platform: chip.dataset.plat, accountId: chip.dataset.acc, status }),
+      });
+    }
+    await syncData(token);
+    toast(status === "DRAFT" ? "Draft saved!" : "Post published!", "ok");
+    renderPage("dashboard");
   } catch (e) {
-    showToast("Failed: " + (e.message || e), "error");
-  } finally {
-    showLoading(false);
+    toast("Failed: " + e.message, "err");
   }
 }
 
-async function handleDarkToggle() {
-  state.settings.darkMode = !state.settings.darkMode;
-  await chrome.storage.local.set({ settings: state.settings });
-  applyDarkMode(state.settings.darkMode);
-  renderSection("settings");
+async function handleLogout() {
+  if (!confirm("Log out of SocialPilot?")) return;
+  await chrome.storage.local.remove(["token", "user", "accounts", "posts", "settings", "subscription"]);
+  state = { user: null, posts: [], accounts: [], settings: {} };
+  showScreen("auth");
 }
 
-// ----------------------------------------------------------------------
-// UI Helpers
-// ----------------------------------------------------------------------
-async function getDarkMode() {
-  const { settings } = await chrome.storage.local.get("settings");
-  return settings?.darkMode || false;
+/* =================== HELPERS =================== */
+function renderPost(p) {
+  const plat = PLATFORMS[p.platform] || { color: "#888" };
+  const statusClass = { SCHEDULED: "badge-scheduled", PUBLISHED: "badge-published", DRAFT: "badge-draft", FAILED: "badge-failed" };
+  return `
+    <div class="post-item">
+      <div class="post-dot" style="background:${plat.color}">${(p.platform || "?")[0].toUpperCase()}</div>
+      <div class="post-body">
+        <div class="post-text">${esc(p.caption || "")}</div>
+        <div class="post-meta">
+          <span class="badge-status ${statusClass[p.status] || ''}">${p.status || "—"}</span>
+          <span>${p.platform || "—"}</span>
+          ${p.scheduledAt ? "<span>" + new Date(p.scheduledAt).toLocaleString() + "</span>" : ""}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
-function applyDarkMode(on) {
-  document.body.classList.toggle("dark", on);
+function emptyHtml(msg) {
+  return `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg><p>${msg}</p></div>`;
 }
 
-function showLogin() {
-  document.getElementById("login-screen").classList.remove("hidden");
-  document.getElementById("main-screen").classList.add("hidden");
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+function toast(msg, type) {
+  const box = document.getElementById("toast-box");
+  const el = document.createElement("div");
+  el.className = "toast toast-" + (type || "info");
+  el.textContent = msg;
+  box.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
 }
 
-function showMain() {
-  document.getElementById("login-screen").classList.add("hidden");
-  document.getElementById("main-screen").classList.remove("hidden");
+function clearErrors() {
+  document.querySelectorAll(".error-msg").forEach(e => e.textContent = "");
 }
 
-function showLoading(on) {
-  document.getElementById("loading").classList.toggle("hidden", !on);
-}
-
-function showToast(msg, kind = "info") {
-  const container = document.getElementById("toast-container");
-  const t = document.createElement("div");
-  t.className = `toast toast-${kind}`;
-  t.textContent = msg;
-  container.appendChild(t);
-  setTimeout(() => t.remove(), 2800);
-}
-
-function formatNum(n) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return String(n);
-}
-
-function timeAgo(iso) {
-  if (!iso) return "";
-  const diff = Date.now() - new Date(iso).getTime();
-  if (diff < 0) return "in the future";
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
-function escapeHtml(s) {
-  const div = document.createElement("div");
-  div.textContent = s || "";
-  return div.innerHTML;
+function applyDark() {
+  document.body.classList.toggle("dark", !!state.settings.darkMode);
 }
