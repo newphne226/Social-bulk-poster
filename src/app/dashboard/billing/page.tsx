@@ -7,6 +7,20 @@ const API = "https://smtools.online/api";
 
 const plans = [
   {
+    id: "FREE",
+    name: "Free",
+    price: 0,
+    icon: Shield,
+    color: "from-slate-400 to-slate-500",
+    borderColor: "border-slate-200",
+    activeColor: "border-slate-400",
+    features: [
+      "1 connected account",
+      "View dashboard",
+      "Community support",
+    ],
+  },
+  {
     id: "CONTENT",
     name: "Content",
     price: 3,
@@ -116,7 +130,7 @@ export default function BillingPage() {
           <span className="text-sm font-medium opacity-90">Current Plan</span>
         </div>
         <div className="text-2xl font-bold">
-          {activePlan ? activePlan.name : "Free"} {activePlan && <span className="text-lg opacity-80">${activePlan.price}/mo</span>}
+          {activePlan ? activePlan.name : "Free"} {activePlan && activePlan.price > 0 && <span className="text-lg opacity-80">${activePlan.price}/mo</span>}
         </div>
         <div className="text-sm opacity-80 mt-1">
           {!activePlan ? "No active subscription — pick a plan below to get started" : "Your subscription is active"}
@@ -168,17 +182,22 @@ export default function BillingPage() {
               </ul>
 
               <button
-                onClick={() => handleSubscribe(plan.id)}
-                disabled={isActive || purchasing === plan.id}
+                onClick={() => {
+                  if (plan.id === "FREE") return;
+                  handleSubscribe(plan.id);
+                }}
+                disabled={isActive || purchasing === plan.id || plan.id === "FREE"}
                 className={`w-full py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-                  isActive
+                  isActive || plan.id === "FREE"
                     ? "bg-slate-100 text-slate-400 cursor-default"
                     : plan.popular
                     ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90"
                     : `bg-gradient-to-r ${plan.color} text-white hover:opacity-90`
                 }`}
               >
-                {isActive ? (
+                {plan.id === "FREE" ? (
+                  "Free Forever"
+                ) : isActive ? (
                   <>
                     <Shield size={16} /> Active
                   </>
