@@ -81,6 +81,18 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
       };
     }
 
+    const isAdminByRole = dbUser.role === "ADMIN" || dbUser.role === "OWNER";
+    if (!isAdminByRole && dbUser.approvalStatus !== "APPROVED") {
+      const statusLabel = dbUser.approvalStatus === "REJECTED" ? "rejected" : "pending approval";
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { error: `Account is ${statusLabel}. Please contact an administrator.`, approvalRequired: true },
+          { status: 403 }
+        ),
+      };
+    }
+
     const plan = (dbUser.subscription?.plan?.tier as PlanTier) ?? "FREE";
 
     return {

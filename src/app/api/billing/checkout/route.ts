@@ -31,19 +31,15 @@ export async function POST(request: NextRequest) {
   const price = PLAN_PRICES[plan][cycle];
 
   // If user wants to pay with crypto, return a redirect to the crypto checkout
-  // The client should call /api/billing/crypto/checkout to create a session.
   if (method === "crypto") {
     return NextResponse.json(
       {
         method: "crypto",
-        redirect: "/api/billing/crypto/checkout",
+        redirect: "/api/billing/nowpayments/checkout",
         plan,
         cycle,
         amount: price,
-        currency: "usdt",
-        network: "BEP20",
-        instructions:
-          "POST to /api/billing/crypto/checkout with { plan, cycle } to create a crypto payment session.",
+        currency: "usd",
       },
       { status: 201 }
     );

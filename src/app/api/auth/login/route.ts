@@ -99,6 +99,12 @@ export async function POST(request: NextRequest) {
     if (user.status === "DELETED" || user.deletedAt) {
       return NextResponse.json({ error: "This account has been deleted." }, { status: 403 });
     }
+    if (user.approvalStatus === "PENDING" && user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Your account is awaiting admin approval. Please try again later.", approvalRequired: true }, { status: 403 });
+    }
+    if (user.approvalStatus === "REJECTED" && user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Your account has been rejected. Please contact support." }, { status: 403 });
+    }
 
     const passwordOk = await bcrypt.compare(password, user.passwordHash);
     if (!passwordOk) {

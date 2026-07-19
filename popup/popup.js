@@ -3,7 +3,7 @@
 // =====================================================================
 import { getApiBase } from "../lib/config.js";
 
-let API_BASE = "http://localhost:3000/api";
+let API_BASE = "https://smtools.online/api";
 
 const PLATFORMS = {
   facebook: { name: "Facebook", color: "#1877F2", icon: "f" },
@@ -285,14 +285,24 @@ async function handleLogin(e) {
   setBtnLoading(btn, true);
 
   try {
-    const response = await sendMessage({
-      type: "AUTH_LOGIN",
-      email,
-      password,
-      remember,
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, remember }),
     });
+    const data = await res.json().catch(() => ({}));
 
-    if (response?.ok === false) throw new Error(response.error || "Login failed");
+    if (!res.ok || data.ok === false) {
+      const error = data.error || `Login failed (${res.status})`;
+      if (data.approvalRequired) {
+        showToast("Your account is awaiting admin approval. Please try again later.", "warning");
+        return;
+      }
+      throw new Error(error);
+    }
+
+    // Save token + user to chrome.storage so background worker can pick them up
+    await chrome.storage.local.set({ token: data.token, user: data.user, subscription: data.subscription });
 
     showMain();
     await loadState();
@@ -354,19 +364,24 @@ async function handleSignup(e) {
   setBtnLoading(btn, true);
 
   try {
-    const response = await sendMessage({
-      type: "AUTH_REGISTER",
-      name,
-      email,
-      password,
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password, remember: true }),
     });
+    const data = await res.json().catch(() => ({}));
 
-    if (response?.ok === false) throw new Error(response.error || "Registration failed");
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.error || `Registration failed (${res.status})`);
+    }
+
+    // Save token + user to chrome.storage so background worker can pick them up
+    await chrome.storage.local.set({ token: data.token, user: data.user, subscription: data.subscription });
 
     showMain();
     await loadState();
     renderSection("dashboard");
-    showToast(`Welcome, ${name.split(" ")[0]}! Your account is ready.`, "success");
+    showToast(`Welcome, ${name.split(" ")[0]}! Your account is pending admin approval. You'll be notified once approved.`, "success");
   } catch (err) {
     const msg = String(err.message || err);
     if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
@@ -387,9 +402,13 @@ async function handleSignup(e) {
 // ----------------------------------------------------------------------
 async function handleLogout() {
   if (!confirm("Log out of SocialPilot?")) return;
-  await sendMessage({ type: "AUTH_LOGOUT" });
+  await chrome.storage.local.remove([
+    "token", "refreshToken", "user", "accounts", "posts",
+    "notifications", "subscription", "settings", "lastSyncAt",
+    "tokenExpiresAt",
+  ]);
+  try { await chrome.action.setBadgeText({ text: "" }); } catch {}
   showLogin();
-  showToast("Signed out", "info");
 }
 
 function setBtnLoading(btn, loading) {
@@ -439,19 +458,23 @@ function sendMessage(message, timeoutMs = 15000) {
 // State Management
 // ----------------------------------------------------------------------
 async function loadState() {
-  const data = await sendMessage({ type: "GET_STATE" });
-  if (data?.ok === false) {
-    console.warn("[SocialPilot] GET_STATE failed:", data.error);
-    if (data.error?.includes("Unauthorized")) handleLogout();
-    return;
-  }
-  if (data) {
+  try {
+    const data = await chrome.storage.local.get([
+      "token", "user", "subscription", "accounts", "posts",
+      "notifications", "settings",
+    ]);
+    if (!data.token) {
+      console.warn("[SocialPilot] No token found — not authenticated");
+      return;
+    }
     state.user = data.user;
     state.subscription = data.subscription;
     state.accounts = data.accounts || [];
     state.posts = data.posts || [];
     state.notifications = data.notifications || [];
     state.settings = { ...state.settings, ...(data.settings || {}) };
+  } catch (err) {
+    console.warn("[SocialPilot] loadState failed:", err);
   }
   updateUserHeader();
   updateNotifBadge();

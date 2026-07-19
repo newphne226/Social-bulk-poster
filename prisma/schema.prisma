@@ -30,6 +30,11 @@ model User {
   twoFactorSecret   String?
   role              UserRole       @default(USER)
   status            UserStatus     @default(ACTIVE)
+  approvalStatus    ApprovalStatus @default(APPROVED)
+  approvedAt        DateTime?
+  approvedBy        String?
+  rejectedAt        DateTime?
+  rejectedReason    String?
   bannedAt          DateTime?
   suspendedAt       DateTime?
   suspendedReason   String?
@@ -59,6 +64,8 @@ model User {
   scheduledJobs     ScheduledJob[]
   cryptoPayments    CryptoPayment[]
   impersonatedBy    String?        // admin user id currently impersonating
+  customerNotes     CustomerNote[]
+  couponUsages      CouponUsage[]
 }
 
 model OAuthAccount {
@@ -115,6 +122,12 @@ enum UserStatus {
   BANNED
   DELETED
   PENDING
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // ---------------------------------------------------------------------
@@ -200,10 +213,16 @@ model Payment {
   stripeInvoiceId String?
   cryptoPaymentId String?         // -> CryptoPayment.id when method = CRYPTO
   failureReason   String?
+  refundAmount    Int             @default(0) // cents refunded
+  refundReason    String?
   refundedAt      DateTime?
+  refundedBy      String?         // admin user id
+  metadata        String          @default("{}")
   createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@index([userId, method])
+  @@index([status, createdAt])
 }
 
 enum PaymentStatus {
@@ -280,20 +299,50 @@ model Invoice {
 model Coupon {
   id              String         @id @default(cuid())
   code            String         @unique
+  name            String?        // display name
+  description     String?
+  type            CouponType     @default(PROMO_CODE)
   planId          String?
   plan            Plan?          @relation(fields: [planId], references: [id])
   percentOff      Int?
-  amountOff       Int?
+  amountOff       Int?           // cents
   currency        String?
   duration        CouponDuration @default(ONCE)
   durationInMonths Int?
   maxRedemptions  Int?
   timesRedeemed   Int            @default(0)
+  minPurchase     Int?           // cents - minimum purchase amount
+  maxDiscount     Int?           // cents - max discount for percent-off coupons
   validFrom       DateTime?
   validUntil      DateTime?
   isActive        Boolean        @default(true)
+  isPublic        Boolean        @default(false) // show on website
   stripeCouponId  String?
+  metadata        String         @default("{}")
   createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  usages          CouponUsage[]
+}
+
+model CouponUsage {
+  id              String   @id @default(cuid())
+  couponId        String
+  coupon          Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  orderId         String?
+  discountAmount  Int      // cents
+  createdAt       DateTime @default(now())
+
+  @@index([couponId])
+  @@index([userId])
+}
+
+enum CouponType {
+  PROMO_CODE
+  CAMPAIGN
+  AUTOMATIC
 }
 
 enum CouponDuration {
@@ -790,4 +839,161 @@ model SystemLog {
   createdAt DateTime @default(now())
 
   @@index([level, createdAt])
+}
+
+// ---------------------------------------------------------------------
+// System Settings (key-value store)
+// ---------------------------------------------------------------------
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  group     String   // general | currency | language | tax | shipping
+  key       String
+  value     String   // JSON or plain text
+  updatedAt DateTime @updatedAt
+
+  @@unique([group, key])
+  @@index([group])
+}
+
+model CustomerNote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adminId   String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------
+// Products / Services
+// ---------------------------------------------------------------------
+
+model ProductCategory {
+  id          String              @id @default(cuid())
+  name        String              @unique
+  slug        String              @unique
+  description String?
+  imageUrl    String?
+  sortOrder   Int                 @default(0)
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  subcategories ProductSubcategory[]
+  products      Product[]
+}
+
+model ProductSubcategory {
+  id          String              @id @default(cuid())
+  name        String
+  slug        String              @unique
+  categoryId  String
+  category    ProductCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  description String?
+  sortOrder   Int                 @default(0)
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  products    Product[]
+
+  @@unique([categoryId, name])
+}
+
+model Brand {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  logoUrl     String?
+  website     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products    Product[]
+}
+
+model Product {
+  id              String              @id @default(cuid())
+  name            String
+  slug            String              @unique
+  description     String?
+  sku             String?             @unique
+  type            ProductType         @default(PHYSICAL)
+  status          ProductStatus       @default(DRAFT)
+
+  // Relations
+  categoryId      String?
+  category        ProductCategory?    @relation(fields: [categoryId], references: [id])
+  subcategoryId   String?
+  subcategory     ProductSubcategory? @relation(fields: [subcategoryId], references: [id])
+  brandId         String?
+  brand           Brand?              @relation(fields: [brandId], references: [id])
+
+  // Media
+  imageUrl        String?
+  galleryUrls     String              @default("[]") // JSON array
+  videoUrl        String?
+
+  // Pricing
+  price           Int                 @default(0) // cents
+  compareAtPrice  Int?                // original price for discount display
+  costPrice       Int?                // wholesale cost
+  currency        String              @default("usd")
+  taxRate         Float               @default(0)
+
+  // Inventory
+  trackInventory  Boolean             @default(false)
+  stockQuantity   Int                 @default(0)
+  lowStockThreshold Int               @default(5)
+  allowBackorder  Boolean             @default(false)
+
+  // Physical product
+  weight          Float?              // grams
+  dimensions      String?             // JSON: {length, width, height}
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  // Flags
+  isActive        Boolean             @default(true)
+  isFeatured      Boolean             @default(false)
+  isTaxable        Boolean             @default(true)
+
+  // Stats
+  salesCount      Int                 @default(0)
+  viewCount       Int                 @default(0)
+  rating          Float               @default(0)
+  reviewCount     Int                 @default(0)
+
+  tags            String              @default("[]") // JSON array
+  metadata        String              @default("{}") // JSON object
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  deletedAt       DateTime?
+
+  @@index([type, status])
+  @@index([categoryId, subcategoryId])
+  @@index([brandId])
+  @@index([sku])
+}
+
+enum ProductType {
+  PHYSICAL
+  DIGITAL
+  SERVICE
+  SUBSCRIPTION
+  BUNDLE
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+  OUT_OF_STOCK
 }

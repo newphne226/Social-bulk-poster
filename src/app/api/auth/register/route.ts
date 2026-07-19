@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
           passwordHash,
           role: "USER",
           status: "ACTIVE",
+          approvalStatus: "PENDING",
           emailVerified: new Date(),
           lastLoginAt: new Date(),
           avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(trimmedName)}`,
@@ -139,6 +140,24 @@ export async function POST(request: NextRequest) {
             billingCycle: "MONTHLY",
             currentPeriodStart: new Date(),
             currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          },
+        });
+      }
+
+      // Notify all admins about new user registration
+      const admins = await tx.user.findMany({
+        where: { role: "ADMIN", status: "ACTIVE" },
+        select: { id: true },
+      });
+
+      for (const admin of admins) {
+        await tx.notification.create({
+          data: {
+            userId: admin.id,
+            type: "SYSTEM",
+            title: "New User Registration",
+            body: `${trimmedName} (${normalizedEmail}) registered via the extension and is awaiting approval.`,
+            data: JSON.stringify({ userId: newUser.id, action: "approval_required" }),
           },
         });
       }

@@ -12,14 +12,14 @@
 //   • Forgot-password link in popup opens the local app, not socialpilot.io.
 // =====================================================================
 
-const DEFAULT_API_BASE = "http://localhost:3000/api";
+const DEFAULT_API_BASE = "https://smtools.online/api";
 
 async function getApiBase() {
   const { apiBaseUrl } = await chrome.storage.local.get("apiBaseUrl");
   return apiBaseUrl || DEFAULT_API_BASE;
 }
 
-let API_BASE = "http://localhost:3000/api";
+let API_BASE = "https://smtools.online/api";
 const SYNC_ALARM = "socialpilot-sync";
 const HEARTBEAT_ALARM = "socialpilot-heartbeat";
 const TOKEN_REFRESH_ALARM = "socialpilot-token-refresh";
@@ -196,6 +196,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
                 ok: false,
                 error: errBody?.error || `Login failed (${res.status})`,
                 status: res.status,
+                approvalRequired: errBody?.approvalRequired || false,
               });
               return;
             }

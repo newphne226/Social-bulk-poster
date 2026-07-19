@@ -12,13 +12,31 @@ import {
   Shield,
   Menu,
   X,
+  UserCheck,
+  ShoppingCart,
+  FolderTree,
+  Globe,
+  CreditCard,
+  BarChart3,
+  Ticket,
+  Settings,
+  ClipboardCheck,
 } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/approvals", label: "Approvals", icon: ClipboardCheck },
   { href: "/admin/orders", label: "Orders", icon: Package },
+  { href: "/admin/payments", label: "Payments", icon: CreditCard },
+  { href: "/admin/products", label: "Products", icon: ShoppingCart },
+  { href: "/admin/categories", label: "Categories", icon: FolderTree },
+  { href: "/admin/brands", label: "Brands", icon: Globe },
+  { href: "/admin/coupons", label: "Coupons", icon: Ticket },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/customers", label: "Customers", icon: UserCheck },
   { href: "/admin/posts", label: "Posts", icon: FileText },
+  { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -123,7 +141,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Menu className="h-6 w-6" />
           </button>
           <h1 className="text-lg font-semibold text-white">
-            {navItems.find((i) => i.href === pathname)?.label ?? "Dashboard"}
+            {navItems.find((i) => pathname === i.href || pathname.startsWith(i.href + "/"))?.label ?? "Dashboard"}
           </h1>
           <div className="ml-auto">
             <Link href="/" className="text-sm text-slate-400 hover:text-white transition-colors">
