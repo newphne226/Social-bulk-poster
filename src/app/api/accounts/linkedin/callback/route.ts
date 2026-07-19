@@ -16,7 +16,8 @@ export async function GET(request: NextRequest) {
   const dashboardUrl = "https://smtools.online/dashboard/accounts";
 
   if (error) {
-    return NextResponse.redirect(`${dashboardUrl}?error=${encodeURIComponent(error)}`);
+    const desc = url.searchParams.get("error_description") || "";
+    return NextResponse.redirect(`${dashboardUrl}?error=${encodeURIComponent(error + " " + desc)}`);
   }
 
   if (!code || !state) {
@@ -43,7 +44,8 @@ export async function GET(request: NextRequest) {
     const tokenData = await tokenRes.json();
 
     if (!tokenData.access_token) {
-      return NextResponse.redirect(`${dashboardUrl}?error=token_exchange_failed`);
+      console.error("[LinkedIn] Token exchange failed:", JSON.stringify(tokenData));
+      return NextResponse.redirect(`${dashboardUrl}?error=${encodeURIComponent(tokenData.error_description || tokenData.error || "token_exchange_failed")}`);
     }
 
     // Step 2: Get user profile

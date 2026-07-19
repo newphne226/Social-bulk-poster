@@ -6,7 +6,7 @@ const REDIRECT_URI = process.env.NEXT_PUBLIC_SITE_URL
   ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/accounts/linkedin/callback`
   : "https://smtools.online/api/accounts/linkedin/callback";
 
-const LINKEDIN_SCOPE = "w_member_social r_liteprofile r_emailaddress";
+const LINKEDIN_SCOPE = "openid profile email w_member_social";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
