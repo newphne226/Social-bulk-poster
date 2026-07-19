@@ -20,19 +20,18 @@ import {
   BarChart3,
   Ticket,
   Settings,
-  ClipboardCheck,
+  Crown,
 } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/approvals", label: "Approvals", icon: ClipboardCheck },
+  { href: "/admin/users", label: "Membership", icon: Crown },
   { href: "/admin/orders", label: "Orders", icon: Package },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/products", label: "Products", icon: ShoppingCart },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
   { href: "/admin/brands", label: "Brands", icon: Globe },
   { href: "/admin/coupons", label: "Coupons", icon: Ticket },
-  { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/customers", label: "Customers", icon: UserCheck },
   { href: "/admin/posts", label: "Posts", icon: FileText },
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },
