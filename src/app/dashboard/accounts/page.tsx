@@ -1,25 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Globe, Plus, Trash2, ExternalLink, CheckCircle } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Globe, Plus, Trash2, CheckCircle, ExternalLink, Lock, Zap } from "lucide-react";
+import Link from "next/link";
 
 const API = "https://smtools.online/api";
-const PLATFORMS: Record<string, { name: string; color: string; icon: string }> = {
-  facebook: { name: "Facebook", color: "#1877F2", icon: "f" },
-  instagram: { name: "Instagram", color: "#E4405F", icon: "IG" },
-  x: { name: "X", color: "#000000", icon: "X" },
-  linkedin: { name: "LinkedIn", color: "#0A66C2", icon: "in" },
-  pinterest: { name: "Pinterest", color: "#BD081C", icon: "P" },
+
+const PLATFORMS: Record<string, { name: string; color: string; icon: string; available: boolean; description: string }> = {
+  facebook: { name: "Facebook", color: "#1877F2", icon: "f", available: true, description: "Connect Facebook Pages to schedule posts" },
+  instagram: { name: "Instagram", color: "#E4405F", icon: "IG", available: false, description: "Coming soon — Instagram scheduling" },
+  x: { name: "X (Twitter)", color: "#000000", icon: "X", available: false, description: "Coming soon — X/Twitter scheduling" },
+  linkedin: { name: "LinkedIn", color: "#0A66C2", icon: "in", available: false, description: "Coming soon — LinkedIn scheduling" },
+  pinterest: { name: "Pinterest", color: "#BD081C", icon: "P", available: false, description: "Coming soon — Pinterest scheduling" },
 };
 
-export default function AccountsPage() {
+function AccountsContent() {
+  const searchParams = useSearchParams();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
-  const [newPlat, setNewPlat] = useState("facebook");
-  const [newName, setNewName] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Handle OAuth callback results
+    const success = searchParams.get("success");
+    const error = searchParams.get("error");
+    if (success) {
+      setToast({ msg: "Facebook account connected successfully!", type: "ok" });
+      window.history.replaceState({}, "", "/dashboard/accounts");
+    }
+    if (error) {
+      setToast({ msg: `Connection failed: ${error}`, type: "err" });
+      window.history.replaceState({}, "", "/dashboard/accounts");
+    }
+  }, [searchParams]);
 
   async function load() {
     const token = localStorage.getItem("sp_token");
@@ -32,146 +48,166 @@ export default function AccountsPage() {
     setLoading(false);
   }
 
-  async function addAccount() {
-    if (!newName.trim()) return;
+  async function connectFacebook() {
     const token = localStorage.getItem("sp_token");
-    await fetch(API + "/accounts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-      body: JSON.stringify({ platform: newPlat, displayName: newName }),
-    });
-    setShowAdd(false);
-    setNewName("");
-    await load();
+    if (!token) {
+      window.location.href = "/signin";
+      return;
+    }
+    setConnecting(true);
+    // Redirect to Facebook OAuth
+    window.location.href = `${API}/accounts/facebook?token=${token}`;
   }
 
   async function removeAccount(id: string) {
-    if (!confirm("Remove this account?")) return;
+    if (!confirm("Remove this connected account?")) return;
     const token = localStorage.getItem("sp_token");
     await fetch(API + "/accounts/" + id, { method: "DELETE", headers: { Authorization: "Bearer " + token } });
     await load();
   }
 
-  const connected = accounts.length;
-  const maxAccounts = 5;
+  const fbAccounts = accounts.filter((a) => a.platform === "facebook");
+  const otherAccounts = accounts.filter((a) => a.platform !== "facebook");
 
   return (
     <div className="space-y-6">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg text-sm font-medium shadow-lg ${
+          toast.type === "ok" ? "bg-green-500 text-white" : "bg-red-500 text-white"
+        }`} onClick={() => setToast(null)}>
+          {toast.msg}
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Connected Accounts</h2>
-          <p className="text-sm text-slate-500">{connected} of {maxAccounts} accounts connected</p>
-        </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-pink-500 text-white rounded-lg text-sm font-semibold hover:opacity-90"
-        >
-          <Plus size={16} /> Connect Account
-        </button>
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Connected Accounts</h2>
+        <p className="text-sm text-slate-500">Connect your social media accounts to schedule posts</p>
       </div>
 
-      {/* Progress */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <div className="flex items-center justify-between text-sm mb-2">
-          <span className="text-slate-600">Account Usage</span>
-          <span className="font-medium text-slate-900">{connected}/{maxAccounts}</span>
-        </div>
-        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-amber-500 to-pink-500 rounded-full transition-all"
-            style={{ width: `${(connected / maxAccounts) * 100}%` }}
-          />
-        </div>
-      </div>
+      {/* Facebook Connect */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="flex items-start gap-4">
+          <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white text-xl font-bold shrink-0" style={{ background: "#1877F2" }}>
+            f
+          </div>
+          <div className="flex-1">
+            <h3 className="text-base font-semibold text-slate-900">Facebook</h3>
+            <p className="text-sm text-slate-500 mt-0.5">Connect your Facebook Pages to schedule posts, reels, and stories</p>
 
-      {/* Add Modal */}
-      {showAdd && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-slate-900">Connect Social Account</h3>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Platform</label>
-              <div className="grid grid-cols-5 gap-2">
-                {Object.entries(PLATFORMS).map(([k, v]) => (
-                  <button
-                    key={k}
-                    onClick={() => setNewPlat(k)}
-                    className={`p-3 rounded-lg border-2 text-center transition-all ${
-                      newPlat === k ? "border-amber-400 bg-amber-50" : "border-slate-200 hover:border-slate-300"
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-full mx-auto mb-1 flex items-center justify-center text-white text-xs font-bold" style={{ background: v.color }}>
-                      {v.icon}
+            {fbAccounts.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {fbAccounts.map((a) => (
+                  <div key={a.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                    <CheckCircle size={16} className="text-green-500 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-slate-900 truncate">{a.displayName}</div>
+                      <div className="text-xs text-slate-400">Connected</div>
                     </div>
-                    <div className="text-[10px] text-slate-600">{v.name}</div>
-                  </button>
+                    <button
+                      onClick={() => removeAccount(a.id)}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 ))}
               </div>
+            ) : null}
+
+            <button
+              onClick={connectFacebook}
+              disabled={connecting}
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 bg-[#1877F2] text-white rounded-lg text-sm font-semibold hover:bg-[#166FE5] disabled:opacity-50 transition-colors"
+            >
+              {connecting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Connecting...
+                </>
+              ) : fbAccounts.length > 0 ? (
+                <>
+                  <Plus size={16} /> Add Another Page
+                </>
+              ) : (
+                <>
+                  <ExternalLink size={16} /> Connect with Facebook
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Other Platforms - Coming Soon */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {Object.entries(PLATFORMS)
+          .filter(([k]) => k !== "facebook")
+          .map(([k, v]) => (
+            <div key={k} className="bg-white rounded-xl border border-slate-200 p-4 opacity-60">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold" style={{ background: v.color }}>
+                  {v.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-semibold text-slate-900">{v.name}</div>
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full uppercase">
+                      Coming Soon
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-400 mt-0.5">{v.description}</div>
+                </div>
+                <Lock size={16} className="text-slate-300 shrink-0" />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Account Name</label>
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. My Business Page"
-                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-amber-400"
-              />
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setShowAdd(false)} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">Cancel</button>
-              <button
-                onClick={addAccount}
-                className="px-5 py-2 bg-gradient-to-r from-amber-500 to-pink-500 text-white rounded-lg text-sm font-semibold hover:opacity-90"
-              >
-                Connect
-              </button>
-            </div>
+          ))}
+      </div>
+
+      {/* Connected count */}
+      {otherAccounts.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <h3 className="text-sm font-semibold text-slate-900 mb-3">Other Connected Accounts</h3>
+          <div className="space-y-2">
+            {otherAccounts.map((a) => {
+              const plat = PLATFORMS[a.platform] || { name: a.platform, color: "#888", icon: "?" };
+              return (
+                <div key={a.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{ background: plat.color }}>
+                    {plat.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-slate-900 truncate">{a.displayName}</div>
+                    <div className="text-xs text-slate-400">{plat.name}</div>
+                  </div>
+                  <button
+                    onClick={() => removeAccount(a.id)}
+                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Accounts List */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
-        </div>
-      ) : accounts.length === 0 ? (
-        <div className="text-center py-16 text-slate-400">
-          <Globe size={40} className="mx-auto mb-3 opacity-40" />
+      {/* Empty state */}
+      {!loading && accounts.length === 0 && (
+        <div className="text-center py-8 text-slate-400">
+          <Globe size={32} className="mx-auto mb-2 opacity-40" />
           <p className="text-sm">No accounts connected yet</p>
-          <p className="text-xs text-slate-300 mt-1">Click &quot;Connect Account&quot; to get started</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {accounts.map((a) => {
-            const plat = PLATFORMS[a.platform] || { name: a.platform, color: "#888", icon: "?" };
-            return (
-              <div key={a.id} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-sm transition-shadow">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold" style={{ background: plat.color }}>
-                    {plat.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">{a.displayName || plat.name}</div>
-                    <div className="text-xs text-slate-500">{plat.name}</div>
-                    {a.followerCount > 0 && (
-                      <div className="text-xs text-slate-400 mt-0.5">{a.followerCount.toLocaleString()} followers</div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <CheckCircle size={14} className="text-green-500" />
-                    <button onClick={() => removeAccount(a.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          <p className="text-xs text-slate-300 mt-1">Click &quot;Connect with Facebook&quot; above to get started</p>
         </div>
       )}
     </div>
+  );
+}
+
+export default function AccountsPage() {
+  return (
+    <AccountsContent />
   );
 }
