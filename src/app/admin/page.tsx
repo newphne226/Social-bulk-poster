@@ -2,25 +2,40 @@
 
 import * as React from "react";
 import {
-  Users,
-  FileText,
-  DollarSign,
-  Activity,
-  ArrowUpRight,
+  ShoppingCart,
   Clock,
   CheckCircle,
+  XCircle,
+  AlertTriangle,
+  DollarSign,
+  Users,
+  TrendingUp,
+  BarChart3,
+  Calendar,
+  Activity,
   AlertCircle,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
 
 interface Stats {
+  totalOrders: number;
+  todayOrders: number;
+  pendingOrders: number;
+  completedOrders: number;
+  cancelledOrders: number;
+  failedOrders: number;
+  totalSales: number;
+  newCustomers: number;
   totalUsers: number;
-  activeUsers: number;
-  totalPosts: number;
-  publishedPosts: number;
-  scheduledPosts: number;
-  totalRevenue: number;
   activeSubscriptions: number;
   totalAccounts: number;
+}
+
+interface DayData {
+  date: string;
+  amount?: number;
+  count?: number;
 }
 
 interface RecentUser {
@@ -34,6 +49,11 @@ interface RecentUser {
 
 export default function AdminDashboard() {
   const [stats, setStats] = React.useState<Stats | null>(null);
+  const [charts, setCharts] = React.useState<{
+    revenueByDay: DayData[];
+    postsByDay: DayData[];
+    usersByDay: DayData[];
+  } | null>(null);
   const [recentUsers, setRecentUsers] = React.useState<RecentUser[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
@@ -55,6 +75,7 @@ export default function AdminDashboard() {
       })
       .then((data) => {
         setStats(data.stats);
+        setCharts(data.charts);
         setRecentUsers(data.recentUsers ?? []);
         setLoading(false);
       })
@@ -99,21 +120,27 @@ export default function AdminDashboard() {
     );
   }
 
-  const cards = [
-    { label: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { label: "Active Users", value: stats?.activeUsers ?? 0, icon: Activity, color: "text-green-500", bg: "bg-green-500/10" },
-    { label: "Total Posts", value: stats?.totalPosts ?? 0, icon: FileText, color: "text-purple-500", bg: "bg-purple-500/10" },
-    { label: "Published", value: stats?.publishedPosts ?? 0, icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { label: "Scheduled", value: stats?.scheduledPosts ?? 0, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
-    { label: "Revenue", value: `$${((stats?.totalRevenue ?? 0) / 100).toFixed(2)}`, icon: DollarSign, color: "text-pink-500", bg: "bg-pink-500/10" },
-    { label: "Subscriptions", value: stats?.activeSubscriptions ?? 0, icon: CheckCircle, color: "text-cyan-500", bg: "bg-cyan-500/10" },
-    { label: "Social Accounts", value: stats?.totalAccounts ?? 0, icon: AlertCircle, color: "text-orange-500", bg: "bg-orange-500/10" },
+  const mainCards = [
+    { label: "Total Orders", value: stats?.totalOrders ?? 0, icon: ShoppingCart, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { label: "Today's Orders", value: stats?.todayOrders ?? 0, icon: Calendar, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: "Pending Orders", value: stats?.pendingOrders ?? 0, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
+    { label: "Completed Orders", value: stats?.completedOrders ?? 0, icon: CheckCircle, color: "text-green-500", bg: "bg-green-500/10" },
+    { label: "Cancelled Orders", value: stats?.cancelledOrders ?? 0, icon: XCircle, color: "text-red-500", bg: "bg-red-500/10" },
+    { label: "Total Sales", value: `$${((stats?.totalSales ?? 0) / 100).toFixed(2)}`, icon: DollarSign, color: "text-pink-500", bg: "bg-pink-500/10" },
+    { label: "New Customers", value: stats?.newCustomers ?? 0, icon: Users, color: "text-cyan-500", bg: "bg-cyan-500/10" },
+    { label: "Active Subscriptions", value: stats?.activeSubscriptions ?? 0, icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10" },
   ];
+
+  const revenueTotal = charts?.revenueByDay?.reduce((s, d) => s + (d.amount ?? 0), 0) ?? 0;
+  const revenueMax = Math.max(...(charts?.revenueByDay?.map((d) => d.amount ?? 0) ?? [1]), 1);
+  const postsMax = Math.max(...(charts?.postsByDay?.map((d) => d.count ?? 0) ?? [1]), 1);
+  const usersMax = Math.max(...(charts?.usersByDay?.map((d) => d.count ?? 0) ?? [1]), 1);
 
   return (
     <div className="space-y-6">
+      {/* Main Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map((card) => (
+        {mainCards.map((card) => (
           <div key={card.label} className="bg-slate-800/50 rounded-2xl border border-slate-700 p-6">
             <div className="flex items-center justify-between mb-4">
               <div className={`p-2 rounded-xl ${card.bg}`}>
@@ -127,6 +154,87 @@ export default function AdminDashboard() {
         ))}
       </div>
 
+      {/* Revenue Overview Chart */}
+      <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-pink-500" />
+              Revenue Overview
+            </h2>
+            <p className="text-sm text-slate-400 mt-1">Last 7 days — Total: ${((revenueTotal) / 100).toFixed(2)}</p>
+          </div>
+          <div className="flex items-center gap-1 text-green-400 text-sm">
+            <TrendingUp className="h-4 w-4" />
+            <span>+12%</span>
+          </div>
+        </div>
+        <div className="flex items-end gap-2 h-48">
+          {charts?.revenueByDay?.map((day, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+              <span className="text-xs text-slate-400">${((day.amount ?? 0) / 100).toFixed(0)}</span>
+              <div
+                className="w-full bg-gradient-to-t from-pink-500 to-pink-400 rounded-t-lg transition-all hover:from-pink-600 hover:to-pink-500"
+                style={{ height: `${Math.max(((day.amount ?? 0) / revenueMax) * 160, 4)}px` }}
+              />
+              <span className="text-xs text-slate-500">
+                {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" })}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Sales & Users Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sales Chart */}
+        <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-6">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-6">
+            <Activity className="h-5 w-5 text-blue-500" />
+            Sales &amp; Analytics
+          </h2>
+          <div className="flex items-end gap-2 h-40">
+            {charts?.postsByDay?.map((day, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <span className="text-xs text-slate-400">{day.count ?? 0}</span>
+                <div
+                  className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg"
+                  style={{ height: `${Math.max(((day.count ?? 0) / postsMax) * 140, 4)}px` }}
+                />
+                <span className="text-xs text-slate-500">
+                  {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" })}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-slate-400 mt-4 text-center">Posts per day</p>
+        </div>
+
+        {/* New Customers Chart */}
+        <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-6">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-6">
+            <Users className="h-5 w-5 text-cyan-500" />
+            New Customers
+          </h2>
+          <div className="flex items-end gap-2 h-40">
+            {charts?.usersByDay?.map((day, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <span className="text-xs text-slate-400">{day.count ?? 0}</span>
+                <div
+                  className="w-full bg-gradient-to-t from-cyan-500 to-cyan-400 rounded-t-lg"
+                  style={{ height: `${Math.max(((day.count ?? 0) / usersMax) * 140, 4)}px` }}
+                />
+                <span className="text-xs text-slate-500">
+                  {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" })}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-slate-400 mt-4 text-center">Users registered per day (last 7 days)</p>
+        </div>
+      </div>
+
+      {/* Recent Users */}
       <div className="bg-slate-800/50 rounded-2xl border border-slate-700">
         <div className="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">Recent Users</h2>
