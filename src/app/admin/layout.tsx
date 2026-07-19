@@ -24,8 +24,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [ready, setReady] = React.useState(false);
 
+  const isLoginPage = pathname === "/admin/login";
+
   React.useEffect(() => {
-    // Small delay to let login page store token before checking
+    if (isLoginPage) {
+      setReady(true);
+      return;
+    }
     const timer = setTimeout(() => {
       const token = localStorage.getItem("sp_admin_token");
       if (!token) {
@@ -35,13 +40,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setReady(true);
     }, 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isLoginPage]);
 
   const handleLogout = () => {
     localStorage.removeItem("sp_admin_token");
     localStorage.removeItem("sp_admin_user");
     window.location.href = "/admin/login";
   };
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
 
   if (!ready) {
     return (
