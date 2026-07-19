@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Search, Filter, Trash2, RefreshCw, Calendar } from "lucide-react";
+import { Plus, Search, Filter, Trash2, RefreshCw, Calendar, FileText } from "lucide-react";
 
 const API = "https://smtools.online/api";
 const PLATFORMS: Record<string, { name: string; color: string }> = {
