@@ -224,9 +224,9 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                        user.plan === "ALL_ACCESS" ? "bg-amber-500/10 text-amber-500" :
-                        user.plan === "REELS" ? "bg-purple-500/10 text-purple-500" :
-                        user.plan === "CONTENT" ? "bg-blue-500/10 text-blue-500" :
+                        user.plan === "PRO" ? "bg-amber-500/10 text-amber-500" :
+                        user.plan === "SILVER" ? "bg-purple-500/10 text-purple-500" :
+                        user.plan === "BASIC" ? "bg-blue-500/10 text-blue-500" :
                         "bg-slate-700 text-slate-400"
                       }`}>
                         {user.plan || "FREE"}
@@ -349,18 +349,18 @@ export default function AdminUsersPage() {
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { id: "FREE", label: "Free", color: "slate" },
-                  { id: "CONTENT", label: "Content ($3)", color: "blue" },
-                  { id: "REELS", label: "Reels ($5)", color: "purple" },
-                  { id: "ALL_ACCESS", label: "All Access ($10)", color: "amber" },
+                  { id: "BASIC", label: "Basic ($3)", color: "blue" },
+                  { id: "SILVER", label: "Silver ($5)", color: "purple" },
+                  { id: "PRO", label: "Pro ($10)", color: "amber" },
                 ].map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setFormPlan(p.id)}
                     className={`px-3 py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
                       formPlan === p.id
-                        ? p.id === "ALL_ACCESS" ? "border-amber-500 bg-amber-500/10 text-amber-500"
-                        : p.id === "REELS" ? "border-purple-500 bg-purple-500/10 text-purple-500"
-                        : p.id === "CONTENT" ? "border-blue-500 bg-blue-500/10 text-blue-500"
+                        ? p.id === "PRO" ? "border-amber-500 bg-amber-500/10 text-amber-500"
+                        : p.id === "SILVER" ? "border-purple-500 bg-purple-500/10 text-purple-500"
+                        : p.id === "BASIC" ? "border-blue-500 bg-blue-500/10 text-blue-500"
                         : "border-slate-500 bg-slate-500/10 text-slate-400"
                         : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600"
                     }`}

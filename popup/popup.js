@@ -180,7 +180,7 @@ function updateHeader() {
   document.getElementById("user-avatar").textContent = initials;
   document.getElementById("user-name").textContent = state.user.name || state.user.email;
   const plan = state.user.plan || "FREE";
-  const planNames = { CONTENT: "Content", REELS: "Reels", ALL_ACCESS: "All Access" };
+  const planNames = { BASIC: "Basic", SILVER: "Silver", PRO: "Pro" };
   document.getElementById("user-plan").textContent = plan === "FREE" ? "Free Plan" : (planNames[plan] || plan) + " Plan";
 }
 

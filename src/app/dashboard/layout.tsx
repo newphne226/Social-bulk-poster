@@ -106,14 +106,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {subPlan !== "FREE" && (
           <div className="px-4 py-2 border-b border-slate-100">
             <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-              subPlan === "ALL_ACCESS"
+              subPlan === "PRO"
                 ? "bg-amber-100 text-amber-700"
-                : subPlan === "REELS"
+                : subPlan === "SILVER"
                 ? "bg-purple-100 text-purple-700"
-                : "bg-blue-100 text-blue-700"
+                : subPlan === "BASIC"
+                ? "bg-blue-100 text-blue-700"
+                : "bg-slate-100 text-slate-600"
             }`}>
               <Crown size={12} />
-              {subPlan === "ALL_ACCESS" ? "All Access" : subPlan === "REELS" ? "Reels" : "Content"}
+              {subPlan === "PRO" ? "Pro" : subPlan === "SILVER" ? "Silver" : subPlan === "BASIC" ? "Basic" : "Free"}
             </div>
           </div>
         )}

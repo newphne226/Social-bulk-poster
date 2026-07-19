@@ -180,9 +180,10 @@ export function mapPaymentStatus(npStatus: string): string {
 
 // Plan price mapping (USD cents)
 export const PLAN_PRICES: Record<string, Record<string, number>> = {
-  CONTENT: { monthly: 300 },       // $3/month — Content posts + photos
-  REELS: { monthly: 500 },         // $5/month — Reels upload
-  ALL_ACCESS: { monthly: 1000 },   // $10/month — All features
+  FREE: { monthly: 0 },
+  BASIC: { monthly: 300 },       // $3/month
+  SILVER: { monthly: 500 },      // $5/month
+  PRO: { monthly: 1000 },        // $10/month
 };
 
 export function getPlanPrice(plan: string, cycle: string): number {

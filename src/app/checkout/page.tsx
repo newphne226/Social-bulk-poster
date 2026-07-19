@@ -6,16 +6,16 @@ import { CreditCard, Zap, Shield, Clock, CheckCircle, RefreshCw, Camera, Film, C
 
 const plans = [
   {
-    id: "CONTENT",
-    name: "Content",
+    id: "BASIC",
+    name: "Basic",
     icon: Camera,
     monthly: 3,
     color: "from-blue-500 to-cyan-500",
     features: ["Content post scheduling", "Photo uploads", "3 connected accounts", "Basic analytics", "Email support"],
   },
   {
-    id: "REELS",
-    name: "Reels",
+    id: "SILVER",
+    name: "Silver",
     icon: Film,
     monthly: 5,
     color: "from-purple-500 to-pink-500",
@@ -23,18 +23,18 @@ const plans = [
     features: ["Reels upload & scheduling", "Video uploads", "5 connected accounts", "Advanced analytics", "Priority support", "AI captions"],
   },
   {
-    id: "ALL_ACCESS",
-    name: "All Access",
+    id: "PRO",
+    name: "Pro",
     icon: Crown,
     monthly: 10,
     color: "from-amber-500 to-orange-500",
-    features: ["Everything in Content + Reels", "Unlimited posts", "Unlimited accounts", "AI hashtags & captions", "Smart queue", "24/7 support", "API access"],
+    features: ["Everything in Basic + Silver", "Unlimited posts", "Unlimited accounts", "AI hashtags & captions", "Smart queue", "24/7 support", "API access"],
   },
 ];
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
-  const initialPlan = searchParams.get("plan") || "REELS";
+  const initialPlan = searchParams.get("plan") || "SILVER";
 
   const [selectedPlan, setSelectedPlan] = React.useState(initialPlan);
   const [loading, setLoading] = React.useState(false);

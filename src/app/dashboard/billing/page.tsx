@@ -21,8 +21,8 @@ const plans = [
     ],
   },
   {
-    id: "CONTENT",
-    name: "Content",
+    id: "BASIC",
+    name: "Basic",
     price: 3,
     icon: Camera,
     color: "from-blue-500 to-cyan-500",
@@ -37,8 +37,8 @@ const plans = [
     ],
   },
   {
-    id: "REELS",
-    name: "Reels",
+    id: "SILVER",
+    name: "Silver",
     price: 5,
     icon: Film,
     color: "from-purple-500 to-pink-500",
@@ -55,8 +55,8 @@ const plans = [
     ],
   },
   {
-    id: "ALL_ACCESS",
-    name: "All Access",
+    id: "PRO",
+    name: "Pro",
     price: 10,
     icon: Crown,
     color: "from-amber-500 to-orange-500",

@@ -107,7 +107,7 @@ export async function PATCH(request: NextRequest) {
       updateData = { role: value };
       break;
     case "setPlan": {
-      const allowedPlans = ["FREE", "CONTENT", "REELS", "ALL_ACCESS"];
+      const allowedPlans = ["FREE", "BASIC", "SILVER", "PRO"];
       const plan = allowedPlans.includes(value) ? value : "FREE";
       // Find or create subscription
       const existingSub = await db.subscription.findUnique({ where: { userId } });

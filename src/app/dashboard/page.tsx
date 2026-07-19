@@ -16,15 +16,15 @@ import Link from "next/link";
 const API = "https://smtools.online/api";
 
 const PLAN_NAMES: Record<string, string> = {
-  CONTENT: "Content",
-  REELS: "Reels",
-  ALL_ACCESS: "All Access",
+  BASIC: "Basic",
+  SILVER: "Silver",
+  PRO: "Pro",
 };
 
 const PLAN_COLORS: Record<string, string> = {
-  CONTENT: "from-blue-500 to-cyan-500",
-  REELS: "from-purple-500 to-pink-500",
-  ALL_ACCESS: "from-amber-500 to-orange-500",
+  BASIC: "from-blue-500 to-cyan-500",
+  SILVER: "from-purple-500 to-pink-500",
+  PRO: "from-amber-500 to-orange-500",
 };
 
 export default function DashboardOverview() {
