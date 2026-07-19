@@ -36,9 +36,11 @@ export default function SignInPage() {
       // Store token
       localStorage.setItem("sp_token", data.token);
       localStorage.setItem("sp_user", JSON.stringify(data.user));
+      if (data.subscription) localStorage.setItem("sp_subscription", JSON.stringify(data.subscription));
       setSuccess(true);
       setTimeout(() => {
-        window.location.href = "/";
+        const role = data.user?.role;
+        window.location.href = (role === "ADMIN" || role === "OWNER") ? "/admin" : "/dashboard";
       }, 1500);
     } catch {
       setError("Network error. Please try again.");

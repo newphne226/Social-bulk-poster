@@ -57,9 +57,11 @@ function bindEvents() {
     });
   });
 
-  // Open dashboard
+  // Open dashboard — admin goes to /admin, user goes to /dashboard
   document.getElementById("btn-open-dash").addEventListener("click", () => {
-    chrome.tabs.create({ url: API.replace(/\/api$/, "") + "/admin" });
+    const role = state.user?.role;
+    const path = (role === "ADMIN" || role === "OWNER") ? "/admin" : "/dashboard";
+    chrome.tabs.create({ url: API.replace(/\/api$/, "") + path });
   });
 }
 
