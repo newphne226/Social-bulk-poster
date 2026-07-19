@@ -30,7 +30,6 @@ export async function GET(request: NextRequest) {
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        subscription: { include: { plan: true } },
         _count: { select: { posts: true, accounts: true } },
       },
     }),
@@ -44,7 +43,7 @@ export async function GET(request: NextRequest) {
       email: u.email,
       role: u.role,
       status: u.status,
-      plan: u.subscription?.plan?.tier ?? "FREE",
+      approvalStatus: u.approvalStatus,
       postsCount: u._count.posts,
       accountsCount: u._count.accounts,
       createdAt: u.createdAt.toISOString(),
@@ -90,6 +89,21 @@ export async function PATCH(request: NextRequest) {
     case "demote":
       updateData = { role: "USER" };
       break;
+    case "approve":
+      updateData = { approvalStatus: "APPROVED", approvedAt: new Date(), approvedBy: auth.user.id };
+      break;
+    case "reject":
+      updateData = { approvalStatus: "REJECTED", rejectedAt: new Date(), rejectedReason: value ?? "Rejected by admin" };
+      break;
+    case "pending":
+      updateData = { approvalStatus: "PENDING", approvedAt: null, rejectedAt: null, rejectedReason: null };
+      break;
+    case "setRole":
+      if (!["USER", "ADMIN", "OWNER"].includes(value)) {
+        return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+      }
+      updateData = { role: value };
+      break;
     case "delete":
       updateData = { status: "DELETED", deletedAt: new Date() };
       break;
@@ -100,7 +114,7 @@ export async function PATCH(request: NextRequest) {
   const updated = await db.user.update({
     where: { id: userId },
     data: updateData,
-    select: { id: true, name: true, email: true, role: true, status: true },
+    select: { id: true, name: true, email: true, role: true, status: true, approvalStatus: true },
   });
 
   return NextResponse.json({ user: updated });
