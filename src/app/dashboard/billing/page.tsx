@@ -124,21 +124,18 @@ export default function BillingPage() {
       </div>
 
       {/* Current Plan Banner */}
-      <div className={`bg-gradient-to-r ${activePlan?.color || "from-slate-400 to-slate-500"} rounded-xl p-6 text-white`}>
-        <div className="flex items-center gap-2 mb-2">
-          <CreditCard size={20} />
-          <span className="text-sm font-medium opacity-90">Current Plan</span>
+      <div className={`bg-gradient-to-r ${activePlan?.color || "from-slate-400 to-slate-500"} rounded-xl px-5 py-3 text-white flex items-center justify-between`}>
+        <div className="flex items-center gap-3">
+          <CreditCard size={18} />
+          <span className="text-sm font-semibold">
+            Current: {activePlan ? activePlan.name : "Free"} {activePlan && activePlan.price > 0 && `— $${activePlan.price}/mo`}
+          </span>
         </div>
-        <div className="text-2xl font-bold">
-          {activePlan ? activePlan.name : "Free"} {activePlan && activePlan.price > 0 && <span className="text-lg opacity-80">${activePlan.price}/mo</span>}
-        </div>
-        <div className="text-sm opacity-80 mt-1">
-          {!activePlan ? "No active subscription — pick a plan below to get started" : "Your subscription is active"}
-        </div>
+        <span className="text-xs opacity-80">{activePlan ? "Active" : "No subscription"}</span>
       </div>
 
       {/* Plan Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {plans.map((plan) => {
           const Icon = plan.icon;
           const isActive = currentPlan === plan.id;
@@ -146,7 +143,7 @@ export default function BillingPage() {
           return (
             <div
               key={plan.id}
-              className={`bg-white rounded-2xl border-2 p-6 relative transition-all hover:shadow-lg ${
+              className={`bg-white rounded-xl border-2 p-4 relative transition-all hover:shadow-lg ${
                 isActive ? `${plan.activeColor} shadow-lg` : plan.borderColor
               }`}
             >
@@ -161,21 +158,21 @@ export default function BillingPage() {
                 </div>
               )}
 
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center mb-4`}>
-                <Icon size={24} className="text-white" />
+              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${plan.color} flex items-center justify-center mb-3`}>
+                <Icon size={20} className="text-white" />
               </div>
 
-              <h3 className="text-lg font-bold text-slate-900">{plan.name}</h3>
+              <h3 className="text-base font-bold text-slate-900">{plan.name}</h3>
 
-              <div className="flex items-baseline gap-1 mt-2 mb-4">
-                <span className="text-3xl font-bold text-slate-900">${plan.price}</span>
-                <span className="text-sm text-slate-500">/month</span>
+              <div className="flex items-baseline gap-1 mt-1 mb-3">
+                <span className="text-2xl font-bold text-slate-900">${plan.price}</span>
+                <span className="text-xs text-slate-500">/mo</span>
               </div>
 
-              <ul className="space-y-3 mb-6">
+              <ul className="space-y-2 mb-4">
                 {plan.features.map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                    <Check size={16} className="text-green-500 shrink-0 mt-0.5" />
+                  <li key={i} className="flex items-start gap-1.5 text-xs text-slate-600">
+                    <Check size={12} className="text-green-500 shrink-0 mt-0.5" />
                     {f}
                   </li>
                 ))}
@@ -187,7 +184,7 @@ export default function BillingPage() {
                   handleSubscribe(plan.id);
                 }}
                 disabled={isActive || purchasing === plan.id || plan.id === "FREE"}
-                className={`w-full py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                className={`w-full py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
                   isActive || plan.id === "FREE"
                     ? "bg-slate-100 text-slate-400 cursor-default"
                     : plan.popular
@@ -199,15 +196,15 @@ export default function BillingPage() {
                   "Free Forever"
                 ) : isActive ? (
                   <>
-                    <Shield size={16} /> Active
+                    <Shield size={14} /> Active
                   </>
                 ) : purchasing === plan.id ? (
                   <>
-                    <Zap size={16} className="animate-spin" /> Processing...
+                    <Zap size={14} className="animate-spin" /> Processing...
                   </>
                 ) : (
                   <>
-                    <Zap size={16} /> Subscribe Now
+                    <Zap size={14} /> Subscribe Now
                   </>
                 )}
               </button>
