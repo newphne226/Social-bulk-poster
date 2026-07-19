@@ -8,14 +8,14 @@
 //     creates a real user in the database with bcrypt-hashed password.
 //   • After successful registration, the user is auto-signed-in.
 //   • API base URL is loaded from chrome.storage.local (configurable
-//     via Options page). Default = http://localhost:3000/api
+//     via Options page). Default = https://smtools.online/api
 //   • All auth requests go through the background service worker so
 //     they survive popup close.
 // =====================================================================
 
 import { getApiBase } from "../lib/config.js";
 
-let API_BASE = "http://localhost:3000/api";
+let API_BASE = "https://smtools.online/api";
 
 const PLATFORMS = {
   facebook: { name: "Facebook", color: "#1877F2", icon: "f" },

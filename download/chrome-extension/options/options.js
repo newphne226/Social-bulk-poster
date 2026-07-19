@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const apiUrlInput = document.getElementById("api-base-url");
   const apiUrlStatus = document.getElementById("api-url-status");
   if (apiUrlInput) {
-    apiUrlInput.value = apiBaseUrl || "http://localhost:3000/api";
+    apiUrlInput.value = apiBaseUrl || "https://smtools.online/api";
   }
   const saveApiUrl = document.getElementById("save-api-url");
   if (saveApiUrl) {
@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (resetApiUrl) {
     resetApiUrl.addEventListener("click", async () => {
       await chrome.storage.local.remove("apiBaseUrl");
-      if (apiUrlInput) apiUrlInput.value = "http://localhost:3000/api";
+      if (apiUrlInput) apiUrlInput.value = "https://smtools.online/api";
       if (apiUrlStatus) apiUrlStatus.textContent = "✓ Reset to default";
       showStatus("API URL reset to default");
     });

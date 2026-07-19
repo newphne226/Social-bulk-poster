@@ -13,7 +13,7 @@
 // and the entire extension will fail to load.
 // =====================================================================
 
-const DEFAULT_API_BASE = "http://localhost:3000/api";
+const DEFAULT_API_BASE = "https://smtools.online/api";
 
 export async function getApiBase() {
   const { apiBaseUrl } = await chrome.storage.local.get("apiBaseUrl");

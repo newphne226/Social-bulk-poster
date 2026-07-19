@@ -14,7 +14,7 @@
 
 import { getApiBase } from "../lib/config.js";
 
-let API_BASE = "http://localhost:3000/api";
+let API_BASE = "https://smtools.online/api";
 const SYNC_ALARM = "socialpilot-sync";
 const HEARTBEAT_ALARM = "socialpilot-heartbeat";
 const TOKEN_REFRESH_ALARM = "socialpilot-token-refresh";
