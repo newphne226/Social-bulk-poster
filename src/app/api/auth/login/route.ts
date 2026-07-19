@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
   } catch (err: any) {
     console.error("[auth/login] error", err);
     return NextResponse.json(
-      { error: "Login failed. Please try again.", details: err?.message || String(err) },
+      { error: "Login failed. Please try again." },
       { status: 500 }
     );
   }
