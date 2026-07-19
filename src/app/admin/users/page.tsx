@@ -59,19 +59,37 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  const handleAction = async (userId: string, action: string) => {
+  const handleAction = async (userId: string, action: string, userName: string) => {
+    const confirmMessages: Record<string, string> = {
+      ban: `Ban user "${userName}"? They won't be able to access the platform.`,
+      suspend: `Suspend user "${userName}"? Their account will be paused.`,
+      activate: `Activate user "${userName}"? They will regain full access.`,
+      promote: `Promote "${userName}" to Admin? They will have full admin privileges.`,
+      demote: `Demote "${userName}" to User? They will lose admin privileges.`,
+    };
+    const msg = confirmMessages[action];
+    if (msg && !confirm(msg)) return;
+
     const token = localStorage.getItem("sp_admin_token");
     if (!token) return;
 
-    await fetch("/api/admin/users", {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ userId, action }),
-    });
-    fetchUsers();
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId, action }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Action failed");
+      }
+      fetchUsers();
+    } catch {
+      alert("Network error");
+    }
   };
 
   return (
@@ -171,7 +189,7 @@ export default function AdminUsersPage() {
                       <div className="flex items-center justify-end gap-2">
                         {user.status === "ACTIVE" ? (
                           <button
-                            onClick={() => handleAction(user.id, "suspend")}
+                            onClick={() => handleAction(user.id, "suspend", user.name ?? user.email)}
                             className="p-1.5 rounded-lg text-yellow-400 hover:bg-yellow-500/10 transition-colors"
                             title="Suspend"
                           >
@@ -179,7 +197,7 @@ export default function AdminUsersPage() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleAction(user.id, "activate")}
+                            onClick={() => handleAction(user.id, "activate", user.name ?? user.email)}
                             className="p-1.5 rounded-lg text-green-400 hover:bg-green-500/10 transition-colors"
                             title="Activate"
                           >
@@ -188,7 +206,7 @@ export default function AdminUsersPage() {
                         )}
                         {user.role === "USER" ? (
                           <button
-                            onClick={() => handleAction(user.id, "promote")}
+                            onClick={() => handleAction(user.id, "promote", user.name ?? user.email)}
                             className="p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition-colors"
                             title="Promote to Admin"
                           >
@@ -196,7 +214,7 @@ export default function AdminUsersPage() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleAction(user.id, "demote")}
+                            onClick={() => handleAction(user.id, "demote", user.name ?? user.email)}
                             className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-500/10 transition-colors"
                             title="Demote to User"
                           >
@@ -204,7 +222,7 @@ export default function AdminUsersPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => handleAction(user.id, "ban")}
+                          onClick={() => handleAction(user.id, "ban", user.name ?? user.email)}
                           className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
                           title="Ban"
                         >

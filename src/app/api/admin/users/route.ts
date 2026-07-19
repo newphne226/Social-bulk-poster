@@ -67,6 +67,11 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "userId and action are required" }, { status: 400 });
   }
 
+  // Prevent admin from performing dangerous actions on themselves
+  if (userId === auth.user.id && ["ban", "suspend", "demote", "delete"].includes(action)) {
+    return NextResponse.json({ error: `You cannot ${action} yourself.` }, { status: 400 });
+  }
+
   let updateData: any = {};
 
   switch (action) {
