@@ -106,6 +106,20 @@ async function seedAdmin() {
 export async function POST(request: NextRequest) {
   try {
     await runMigration();
+    // Always update plans (not just on empty DB)
+    const plans = [
+      { name: "Free", tier: "FREE" as const, priceMonthly: 0, priceYearly: 0, features: "[]", limits: '{"maxPlatforms":1}' },
+      { name: "Basic", tier: "SILVER" as const, priceMonthly: 300, priceYearly: 3000, features: "[]", limits: '{"maxPlatforms":3}' },
+      { name: "Silver", tier: "VIP_PRO" as const, priceMonthly: 500, priceYearly: 5000, features: "[]", limits: '{"maxPlatforms":5}' },
+      { name: "Pro", tier: "ENTERPRISE" as const, priceMonthly: 1000, priceYearly: 10000, features: "[]", limits: '{"maxPlatforms":999}' },
+    ];
+    for (const p of plans) {
+      await db.plan.upsert({
+        where: { name: p.name },
+        update: { tier: p.tier, priceMonthly: p.priceMonthly, priceYearly: p.priceYearly, features: p.features, limits: p.limits },
+        create: p,
+      });
+    }
     await seedAdmin();
     return NextResponse.json({ ok: true, message: "Database seeded successfully" });
   } catch (err) {
