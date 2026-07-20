@@ -18,7 +18,11 @@ async function ensureSeeded() {
       { name: "Pro", tier: "ENTERPRISE" as const, priceMonthly: 1000, priceYearly: 10000, features: "[]", limits: '{"maxPlatforms":999,"maxAccountsPerPlatform":999,"maxScheduledPosts":99999}' },
     ];
     for (const p of plans) {
-      await db.plan.upsert({ where: { name: p.name }, update: {}, create: p });
+      await db.plan.upsert({
+        where: { name: p.name },
+        update: { tier: p.tier, priceMonthly: p.priceMonthly, priceYearly: p.priceYearly, features: p.features, limits: p.limits },
+        create: p,
+      });
     }
 
     const hash = await bcrypt.hash("admin123", 10);
