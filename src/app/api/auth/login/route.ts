@@ -78,8 +78,10 @@ export async function POST(request: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { email: normalizedEmail },
-      include: {
-        subscription: { include: { plan: true } },
+      select: {
+        id: true, email: true, name: true, passwordHash: true, role: true,
+        status: true, approvalStatus: true, avatarUrl: true, createdAt: true,
+        subscription: { select: { status: true, billingCycle: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, plan: { select: { tier: true } } } },
       },
     });
 
