@@ -21,20 +21,19 @@ export async function GET(request: NextRequest) {
   });
 
   if (sub && sub.plan) {
-    const tier = sub.plan.tier;
-    const tierMap: Record<string, string> = { FREE: "FREE", SILVER: "BASIC", VIP_PRO: "SILVER", ENTERPRISE: "PRO" };
-    const planName = tierMap[tier] || "FREE";
+    const planName = sub.plan.name; // "Free", "Basic", "Silver", "Pro"
+    const uiPlan = planName === "Free" ? "FREE" : planName === "Basic" ? "BASIC" : planName === "Silver" ? "SILVER" : planName === "Pro" ? "PRO" : "FREE";
     const isActive = sub.status === "ACTIVE";
 
     return NextResponse.json({
       subscription: {
-        plan: planName,
+        plan: uiPlan,
         status: sub.status,
         billingCycle: sub.billingCycle,
         currentPeriodStart: sub.currentPeriodStart?.toISOString() ?? null,
         currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
         cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
-        features: isActive ? (PLAN_FEATURES[planName] || []) : [],
+        features: isActive ? (PLAN_FEATURES[uiPlan] || []) : [],
       },
     });
   }

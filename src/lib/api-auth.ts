@@ -93,12 +93,13 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     try {
       const sub = await db.subscription.findUnique({
         where: { userId: dbUser.id },
-        select: { status: true, plan: { select: { tier: true } } },
+        select: { status: true, plan: { select: { name: true } } },
       });
       if (sub && sub.status === "ACTIVE" && sub.plan) {
-        const tier = sub.plan.tier;
-        const tierMap: Record<string, PlanTier> = { FREE: "FREE", SILVER: "BASIC", VIP_PRO: "SILVER", ENTERPRISE: "PRO" };
-        plan = tierMap[tier] || "FREE";
+        const name = sub.plan.name;
+        if (name === "Basic") plan = "BASIC";
+        else if (name === "Silver") plan = "SILVER";
+        else if (name === "Pro") plan = "PRO";
       }
     } catch {}
 
