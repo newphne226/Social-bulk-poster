@@ -157,7 +157,10 @@ export async function getCurrencies(): Promise<CurrencyInfo[]> {
 export function verifyIpnSignature(body: string, signature: string): boolean {
   const crypto = require("crypto");
   const secret = getIpnSecret();
-  if (!secret) return true; // Skip verification if no secret configured
+  if (!secret) {
+    console.warn("[NOWPayments] No IPN secret configured — rejecting webhook");
+    return false;
+  }
 
   const hmac = crypto.createHmac("sha512", secret);
   hmac.update(body);
@@ -171,9 +174,9 @@ export function mapPaymentStatus(npStatus: string): string {
     case "finished": return "CONFIRMED";
     case "sending": return "CONFIRMING";
     case "failed": return "FAILED";
-    case "refunded": return "REFUNDED";
+    case "refunded": return "CONFIRMED"; // treat refunded as confirmed (already paid)
     case "expired": return "EXPIRED";
-    case "mismatch": return "MISMATCH";
+    case "mismatch": return "FAILED";
     default: return "PENDING";
   }
 }

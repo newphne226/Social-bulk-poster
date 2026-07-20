@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
           cycle,
           metadata: JSON.stringify({
             invoiceId: invoice.id,
-            paymentId: invoice.payment_id,
+            paymentId: invoice.payment_id ?? null,
             payAddress: invoice.pay_address,
           }),
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
