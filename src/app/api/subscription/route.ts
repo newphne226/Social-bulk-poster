@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
 
   if (sub && sub.plan) {
     const tier = sub.plan.tier;
-    const planName = tier === "VIP_PRO" ? "PRO" : tier;
+    const tierMap: Record<string, string> = { FREE: "FREE", SILVER: "BASIC", VIP_PRO: "SILVER", ENTERPRISE: "PRO" };
+    const planName = tierMap[tier] || "FREE";
     const isActive = sub.status === "ACTIVE";
 
     return NextResponse.json({

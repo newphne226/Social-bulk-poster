@@ -61,9 +61,9 @@ async function seedAdmin() {
 
     const plans = [
       { name: "Free", tier: "FREE" as const, priceMonthly: 0, priceYearly: 0, features: "[]", limits: '{"maxPlatforms":1}' },
-      { name: "Silver", tier: "SILVER" as const, priceMonthly: 999, priceYearly: 9999, features: "[]", limits: '{"maxPlatforms":3}' },
-      { name: "VIP Pro", tier: "VIP_PRO" as const, priceMonthly: 2999, priceYearly: 29999, features: "[]", limits: '{"maxPlatforms":5}' },
-      { name: "Enterprise", tier: "ENTERPRISE" as const, priceMonthly: 9999, priceYearly: 99999, features: "[]", limits: '{"maxPlatforms":999}' },
+      { name: "Basic", tier: "SILVER" as const, priceMonthly: 300, priceYearly: 3000, features: "[]", limits: '{"maxPlatforms":3}' },
+      { name: "Silver", tier: "VIP_PRO" as const, priceMonthly: 500, priceYearly: 5000, features: "[]", limits: '{"maxPlatforms":5}' },
+      { name: "Pro", tier: "ENTERPRISE" as const, priceMonthly: 1000, priceYearly: 10000, features: "[]", limits: '{"maxPlatforms":999}' },
     ];
     for (const p of plans) {
       await db.plan.upsert({ where: { name: p.name }, update: {}, create: p });

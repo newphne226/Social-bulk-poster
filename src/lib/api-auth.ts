@@ -97,9 +97,8 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
       });
       if (sub && sub.status === "ACTIVE" && sub.plan) {
         const tier = sub.plan.tier;
-        if (tier === "BASIC" || tier === "SILVER" || tier === "PRO") {
-          plan = tier;
-        }
+        const tierMap: Record<string, PlanTier> = { FREE: "FREE", SILVER: "BASIC", VIP_PRO: "SILVER", ENTERPRISE: "PRO" };
+        plan = tierMap[tier] || "FREE";
       }
     } catch {}
 

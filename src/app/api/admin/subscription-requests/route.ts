@@ -97,7 +97,7 @@ export async function PATCH(request: NextRequest) {
 
     if (action === "approve") {
       // Find the plan in the database
-      const planName = subRequest.plan === "PRO" ? "VIP Pro" : subRequest.plan === "SILVER" ? "Silver" : "Free";
+      const planName = subRequest.plan === "PRO" ? "Pro" : subRequest.plan === "SILVER" ? "Silver" : "Basic";
       const plan = await tx.plan.findFirst({ where: { name: planName } });
 
       if (plan) {
