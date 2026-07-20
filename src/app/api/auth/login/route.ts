@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true, email: true, name: true, passwordHash: true, role: true,
         status: true, approvalStatus: true, avatarUrl: true, createdAt: true,
-        subscription: { select: { status: true, billingCycle: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, plan: { select: { tier: true } } } },
+        subscription: { select: { status: true, billingCycle: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, plan: { select: { name: true } } } },
       },
     });
 
@@ -122,7 +122,8 @@ export async function POST(request: NextRequest) {
     const remember = body?.remember === true;
     const token = generateToken(user.id, remember);
 
-    const plan = user.subscription?.plan?.tier ?? "FREE";
+    const planName = user.subscription?.plan?.name ?? "FREE";
+    const plan = planName === "Free" ? "FREE" : planName === "Basic" ? "BASIC" : planName === "Silver" ? "SILVER" : planName === "Pro" ? "PRO" : "FREE";
     const subscriptionStatus = user.subscription?.status ?? "ACTIVE";
 
     return NextResponse.json({
