@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
 
     const newStatus = mapPaymentStatus(payment_status);
 
+    // If payment is confirmed, mark confirmedAt
+    const isConfirmed = payment_status === "finished";
+
     await db.cryptoPayment.update({
       where: { id: cryptoPayment.id },
       data: {
@@ -49,7 +52,7 @@ export async function POST(request: NextRequest) {
         txHash: payload.tx_hash || cryptoPayment.txHash,
         fromAddress: pay_address || cryptoPayment.fromAddress,
         confirmations: payload.confirmations || cryptoPayment.confirmations,
-        confirmedAt: payment_status === "finished" ? new Date() : cryptoPayment.confirmedAt,
+        confirmedAt: isConfirmed ? new Date() : cryptoPayment.confirmedAt,
         metadata: JSON.stringify({
           ...JSON.parse(cryptoPayment.metadata),
           ipnPayload: payload,
@@ -57,6 +60,12 @@ export async function POST(request: NextRequest) {
         }),
       },
     });
+
+    // SubscriptionRequest stays PENDING — admin must approve it
+    // The request was already created during checkout
+    if (isConfirmed) {
+      console.log(`[NOWPayments] Payment ${cryptoPayment.id} CONFIRMED — SubscriptionRequest awaiting admin approval`);
+    }
 
     console.log(`[NOWPayments] Payment ${cryptoPayment.id} updated to ${newStatus}`);
 

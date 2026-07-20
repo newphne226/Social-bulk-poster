@@ -1,41 +1,60 @@
 // GET /api/subscription — current subscription.
-// PUT /api/subscription — update (upgrade/downgrade/cancel).
+// PUT /api/subscription — update (cancel).
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 
 const PLAN_FEATURES: Record<string, string[]> = {
-  CONTENT: ["content_post", "photo_upload"],
-  REELS: ["reels_upload", "video_upload", "ai_captions"],
-  ALL_ACCESS: ["content_post", "photo_upload", "reels_upload", "video_upload", "ai_captions", "ai_hashtags", "smart_queue", "api_access"],
+  BASIC: ["content_post", "photo_upload", "basic_analytics"],
+  SILVER: ["content_post", "photo_upload", "reels_upload", "video_upload", "ai_captions", "advanced_analytics"],
+  PRO: ["content_post", "photo_upload", "reels_upload", "video_upload", "ai_captions", "ai_hashtags", "smart_queue", "api_access", "unlimited_posts", "unlimited_accounts"],
 };
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
-  // Check for most recent confirmed crypto payment
-  const lastPayment = await db.cryptoPayment.findFirst({
-    where: { userId: auth.user.id, status: "CONFIRMED" },
-    orderBy: { createdAt: "desc" },
+  // Read from Subscription model (set by admin approval)
+  const sub = await db.subscription.findUnique({
+    where: { userId: auth.user.id },
+    include: { plan: { select: { name: true, tier: true } } },
   });
 
-  if (lastPayment) {
-    const plan = lastPayment.plan || "FREE";
-    const created = new Date(lastPayment.createdAt);
-    const expires = new Date(created.getTime() + 30 * 24 * 60 * 60 * 1000);
-    const now = new Date();
-    const isActive = now < expires && !lastPayment.metadata?.includes('"canceled":true');
+  if (sub && sub.plan) {
+    const tier = sub.plan.tier;
+    const planName = tier === "VIP_PRO" ? "PRO" : tier;
+    const isActive = sub.status === "ACTIVE";
 
     return NextResponse.json({
       subscription: {
-        plan,
-        status: isActive ? "ACTIVE" : "EXPIRED",
-        billingCycle: lastPayment.cycle || "MONTHLY",
-        currentPeriodStart: created.toISOString(),
-        currentPeriodEnd: expires.toISOString(),
+        plan: planName,
+        status: sub.status,
+        billingCycle: sub.billingCycle,
+        currentPeriodStart: sub.currentPeriodStart?.toISOString() ?? null,
+        currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
+        cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+        features: isActive ? (PLAN_FEATURES[planName] || []) : [],
+      },
+    });
+  }
+
+  // Check for pending subscription requests
+  const pendingRequest = await db.subscriptionRequest.findFirst({
+    where: { userId: auth.user.id, status: "PENDING" },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (pendingRequest) {
+    return NextResponse.json({
+      subscription: {
+        plan: pendingRequest.plan,
+        status: "PENDING_APPROVAL",
+        billingCycle: pendingRequest.cycle,
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
-        features: PLAN_FEATURES[plan] || [],
+        features: [],
+        requestId: pendingRequest.id,
       },
     });
   }
@@ -59,20 +78,14 @@ export async function PUT(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const body = await request.json().catch(() => ({}));
-  const { action, plan } = body ?? {};
+  const { action } = body ?? {};
 
   if (action === "cancel") {
-    const lastPayment = await db.cryptoPayment.findFirst({
-      where: { userId: auth.user.id, status: "CONFIRMED" },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (lastPayment && lastPayment.metadata) {
-      const meta = JSON.parse(lastPayment.metadata || "{}");
-      meta.canceled = true;
-      await db.cryptoPayment.update({
-        where: { id: lastPayment.id },
-        data: { metadata: JSON.stringify(meta) },
+    const sub = await db.subscription.findUnique({ where: { userId: auth.user.id } });
+    if (sub) {
+      await db.subscription.update({
+        where: { id: sub.id },
+        data: { status: "CANCELED", canceledAt: new Date(), cancelAtPeriodEnd: false },
       });
     }
 

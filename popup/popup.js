@@ -151,6 +151,7 @@ async function syncData(token) {
     state.accounts = Array.isArray(accountsRes) ? accountsRes : (accountsRes.accounts || []);
     if (subRes.subscription) {
       state.user.plan = subRes.subscription.plan || "FREE";
+      state.user.planStatus = subRes.subscription.status || "ACTIVE";
     }
     await chrome.storage.local.set({ posts: state.posts, accounts: state.accounts, user: state.user, lastSyncAt: Date.now() });
   } catch (e) {
@@ -180,8 +181,13 @@ function updateHeader() {
   document.getElementById("user-avatar").textContent = initials;
   document.getElementById("user-name").textContent = state.user.name || state.user.email;
   const plan = state.user.plan || "FREE";
+  const planStatus = state.user.planStatus || "ACTIVE";
   const planNames = { BASIC: "Basic", SILVER: "Silver", PRO: "Pro" };
-  document.getElementById("user-plan").textContent = plan === "FREE" ? "Free Plan" : (planNames[plan] || plan) + " Plan";
+  if (planStatus === "PENDING_APPROVAL") {
+    document.getElementById("user-plan").textContent = (planNames[plan] || plan) + " (Pending)";
+  } else {
+    document.getElementById("user-plan").textContent = plan === "FREE" ? "Free Plan" : (planNames[plan] || plan) + " Plan";
+  }
 }
 
 /* -- Dashboard -- */

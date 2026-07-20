@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyToken } from "@/app/api/auth/register/route";
 
-export type PlanTier = "FREE" | "SILVER" | "VIP_PRO" | "ENTERPRISE";
+export type PlanTier = "FREE" | "BASIC" | "SILVER" | "PRO";
 
 export interface AuthUser {
   id: string;
@@ -88,7 +88,20 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
       };
     }
 
-    const plan = "FREE" as PlanTier;
+    // Load real plan from Subscription model
+    let plan: PlanTier = "FREE";
+    try {
+      const sub = await db.subscription.findUnique({
+        where: { userId: dbUser.id },
+        select: { status: true, plan: { select: { tier: true } } },
+      });
+      if (sub && sub.status === "ACTIVE" && sub.plan) {
+        const tier = sub.plan.tier;
+        if (tier === "BASIC" || tier === "SILVER" || tier === "PRO") {
+          plan = tier;
+        }
+      }
+    } catch {}
 
     return {
       ok: true,

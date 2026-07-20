@@ -34,6 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [subPlan, setSubPlan] = useState("FREE");
+  const [subStatus, setSubStatus] = useState("ACTIVE");
 
   useEffect(() => {
     const token = localStorage.getItem("sp_token");
@@ -55,7 +56,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .then((r) => r.json())
       .then((d) => {
         const plan = d.subscription?.plan || "FREE";
+        const status = d.subscription?.status || "ACTIVE";
         setSubPlan(plan);
+        setSubStatus(status);
         localStorage.setItem("sp_subscription", JSON.stringify(d.subscription));
       })
       .catch(() => {});
@@ -106,7 +109,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {subPlan !== "FREE" && (
           <div className="px-4 py-2 border-b border-slate-100">
             <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-              subPlan === "PRO"
+              subStatus === "PENDING_APPROVAL"
+                ? "bg-amber-100 text-amber-700"
+                : subPlan === "PRO"
                 ? "bg-amber-100 text-amber-700"
                 : subPlan === "SILVER"
                 ? "bg-purple-100 text-purple-700"
@@ -115,7 +120,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 : "bg-slate-100 text-slate-600"
             }`}>
               <Crown size={12} />
-              {subPlan === "PRO" ? "Pro" : subPlan === "SILVER" ? "Silver" : subPlan === "BASIC" ? "Basic" : "Free"}
+              {subStatus === "PENDING_APPROVAL" ? `${subPlan} (Pending)` : subPlan === "PRO" ? "Pro" : subPlan === "SILVER" ? "Silver" : subPlan === "BASIC" ? "Basic" : "Free"}
             </div>
           </div>
         )}

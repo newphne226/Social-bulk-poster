@@ -10,6 +10,7 @@ import {
   Calendar,
   Crown,
   Zap,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -32,6 +33,7 @@ export default function DashboardOverview() {
   const [recentPosts, setRecentPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [subPlan, setSubPlan] = useState("FREE");
+  const [subStatus, setSubStatus] = useState("ACTIVE");
   const [subExpiry, setSubExpiry] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export default function DashboardOverview() {
 
       if (subRes.subscription) {
         setSubPlan(subRes.subscription.plan || "FREE");
+        setSubStatus(subRes.subscription.status || "ACTIVE");
         setSubExpiry(subRes.subscription.currentPeriodEnd || null);
       }
     } catch (e) {
@@ -87,7 +90,25 @@ export default function DashboardOverview() {
   return (
     <div className="space-y-6">
       {/* Subscription Banner */}
-      {subPlan === "FREE" ? (
+      {subStatus === "PENDING_APPROVAL" ? (
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Clock size={20} />
+                <span className="text-sm font-medium opacity-90">Subscription Pending Approval</span>
+              </div>
+              <p className="text-sm opacity-80">Your {subPlan} plan is awaiting admin approval. You&apos;ll get access once approved.</p>
+            </div>
+            <Link
+              href="/dashboard/billing"
+              className="px-5 py-2.5 bg-white text-amber-600 rounded-lg text-sm font-semibold hover:bg-amber-50 transition-colors"
+            >
+              View Status
+            </Link>
+          </div>
+        </div>
+      ) : subPlan === "FREE" ? (
         <div className="bg-gradient-to-r from-amber-500 to-pink-500 rounded-xl p-6 text-white">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
