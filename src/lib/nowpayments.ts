@@ -44,6 +44,7 @@ export interface NowPaymentInvoice {
   status: string;
   pay_address: string | null;
   payment_url: string | null;
+  invoice_url: string | null;
 }
 
 export interface IPNPayload {

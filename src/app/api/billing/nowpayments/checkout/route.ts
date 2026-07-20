@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       invoiceId: invoice.id,
-      paymentUrl: invoice.payment_url,
+      paymentUrl: invoice.invoice_url,
       payAddress: invoice.pay_address,
       payCurrency: invoice.pay_currency,
       priceAmount: priceUsd,
