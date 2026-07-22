@@ -8,8 +8,8 @@ const API = "/api";
 
 const PLATFORMS: Record<string, { name: string; color: string; icon: string; available: boolean; description: string }> = {
   linkedin: { name: "LinkedIn", color: "#0A66C2", icon: "in", available: true, description: "Connect LinkedIn to schedule posts and updates" },
+  x: { name: "X (Twitter)", color: "#000000", icon: "X", available: true, description: "Connect X/Twitter to schedule tweets and updates" },
   instagram: { name: "Instagram", color: "#E4405F", icon: "IG", available: false, description: "Coming soon — Instagram scheduling" },
-  x: { name: "X (Twitter)", color: "#000000", icon: "X", available: false, description: "Coming soon — X/Twitter scheduling" },
   pinterest: { name: "Pinterest", color: "#BD081C", icon: "P", available: false, description: "Coming soon — Pinterest scheduling" },
 };
 
