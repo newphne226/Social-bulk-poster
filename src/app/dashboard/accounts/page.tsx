@@ -55,7 +55,7 @@ export default function AccountsPage() {
       return;
     }
     setConnecting(true);
-    window.location.href = `${API}/accounts/${platform}?token=${token}`;
+    window.location.href = `${API}/accounts/${platform}?token=${encodeURIComponent(token)}`;
   }
 
   async function removeAccount(id: string) {
