@@ -16,21 +16,21 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   FREE: {
     maxPlatforms: 1,
     maxAccountsPerPlatform: 1,
-    maxScheduledPosts: 10,
+    maxScheduledPosts: 50,
     maxMediaStorageMB: 50,
     features: ["basic_dashboard", "community_support"],
   },
   SILVER: {
     maxPlatforms: 2,
     maxAccountsPerPlatform: 10,
-    maxScheduledPosts: -1, // unlimited
+    maxScheduledPosts: 200,
     maxMediaStorageMB: 2048,
     features: ["basic_dashboard", "bulk_scheduling", "calendar", "media_library", "email_support"],
   },
   VIP_PRO: {
     maxPlatforms: -1, // unlimited
     maxAccountsPerPlatform: 100,
-    maxScheduledPosts: -1,
+    maxScheduledPosts: 500,
     maxMediaStorageMB: 20480,
     features: [
       "basic_dashboard",
@@ -49,7 +49,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   ENTERPRISE: {
     maxPlatforms: -1,
     maxAccountsPerPlatform: 1000,
-    maxScheduledPosts: -1,
+    maxScheduledPosts: 700,
     maxMediaStorageMB: 102400,
     features: [
       "basic_dashboard",
@@ -83,7 +83,7 @@ export const PLANS_CATALOG = [
     features: [
       "1 social platform",
       "1 connected account",
-      "10 scheduled posts",
+      "50 posts",
       "Basic dashboard",
       "Community support",
     ],
@@ -100,7 +100,7 @@ export const PLANS_CATALOG = [
     features: [
       "2 social platforms",
       "Up to 10 accounts per platform",
-      "Unlimited scheduled posts",
+      "200 posts",
       "Bulk scheduling",
       "Calendar view",
       "Media library",
@@ -119,7 +119,7 @@ export const PLANS_CATALOG = [
     features: [
       "Unlimited platforms",
       "Up to 100 accounts per platform",
-      "Unlimited scheduling & media",
+      "500 posts",
       "AI features (caption, hashtag, emoji)",
       "Advanced analytics",
       "Priority queue",
@@ -172,14 +172,14 @@ export function canConnectAccount(
 
 export function canSchedulePost(
   tier: PlanTier,
-  currentScheduledCount: number
+  currentPostCount: number
 ): { allowed: boolean; reason?: string } {
   const limits = getPlanLimits(tier);
   if (limits.maxScheduledPosts === -1) return { allowed: true };
-  if (currentScheduledCount >= limits.maxScheduledPosts) {
+  if (currentPostCount >= limits.maxScheduledPosts) {
     return {
       allowed: false,
-      reason: `Your plan allows ${limits.maxScheduledPosts} scheduled post(s). Upgrade for unlimited.`,
+      reason: `Your plan allows ${limits.maxScheduledPosts} posts. Upgrade for unlimited.`,
     };
   }
   return { allowed: true };

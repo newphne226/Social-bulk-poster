@@ -40,24 +40,40 @@ async function runMigration() {
 async function seedAdmin() {
   try {
     const existing = await db.user.findUnique({
-      where: { email: "admin@test.com" },
-      select: { id: true },
+      where: { email: "sreja174@gmail.com" },
+      select: { id: true, role: true },
     });
-    if (existing) return;
 
-    const hash = await bcrypt.hash("admin123", 10);
-    const admin = await db.user.create({
-      data: {
-        email: "admin@test.com",
-        name: "Admin",
-        passwordHash: hash,
-        role: "ADMIN",
-        status: "ACTIVE",
-        emailVerified: new Date(),
-        lastLoginAt: new Date(),
-        avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=Admin",
-      },
-    });
+    const hash = await bcrypt.hash("sefalY@12547", 10);
+    let admin;
+    if (existing) {
+      admin = await db.user.update({
+        where: { id: existing.id },
+        data: { passwordHash: hash, role: "ADMIN", status: "ACTIVE", emailVerified: new Date() },
+      });
+    } else {
+      // Also update any old admin@test.com user
+      const oldAdmin = await db.user.findUnique({ where: { email: "admin@test.com" }, select: { id: true } });
+      if (oldAdmin) {
+        admin = await db.user.update({
+          where: { id: oldAdmin.id },
+          data: { email: "sreja174@gmail.com", passwordHash: hash, name: "Admin", role: "ADMIN", status: "ACTIVE", emailVerified: new Date(), lastLoginAt: new Date() },
+        });
+      } else {
+        admin = await db.user.create({
+          data: {
+            email: "sreja174@gmail.com",
+            name: "Admin",
+            passwordHash: hash,
+            role: "ADMIN",
+            status: "ACTIVE",
+            emailVerified: new Date(),
+            lastLoginAt: new Date(),
+            avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=Admin",
+          },
+        });
+      }
+    }
 
     const plans = [
       { name: "Free", tier: "FREE" as const, priceMonthly: 0, priceYearly: 0, features: "[]", limits: '{"maxPlatforms":1}' },

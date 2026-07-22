@@ -42,14 +42,14 @@ export default function ContactPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-semibold text-lg text-slate-900 dark:text-white">SocialPilot</span>
+              <span className="font-semibold text-lg text-slate-900 dark:text-white">SMTools</span>
             </div>
             <nav className="hidden md:flex items-center gap-6">
               <a href="/" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Home</a>
               <a href="/blog" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Blog</a>
               <a href="/features" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Features</a>
               <a href="/pricing" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Pricing</a>
-              <a href="https://chrome.google.com/webstore/detail/socialpilot" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-amber-500/25">Get Extension</a>
+              <a href="https://chrome.google.com/webstore/detail/smtools" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-amber-500/25">Get Extension</a>
             </nav>
           </div>
         </nav>
@@ -68,7 +68,7 @@ export default function ContactPage() {
           </h1>
           
           <p className="text-lg text-slate-600 dark:text-slate-300 mb-10 max-w-2xl mx-auto">
-            Have questions about SocialPilot? Need help with your account? Want to partner with us? 
+            Have questions about SMTools? Need help with your account? Want to partner with us? 
             Fill out the form and our team will get back to you within 24 hours.
           </p>
         </div>
@@ -84,7 +84,7 @@ export default function ContactPage() {
               
               <div className="space-y-6">
                 {[
-                  { icon: Mail, title: "Email Us", content: "support@socialpilot.io", sub: "We respond within 24 hours" },
+                  { icon: Mail, title: "Email Us", content: "support@smtools.online", sub: "We respond within 24 hours" },
                   { icon: Clock, title: "Business Hours", content: "Mon–Fri, 9AM–6PM EST", sub: "Weekends: Limited support" },
                   { icon: MapPin, title: "Office", content: "San Francisco, CA", sub: "Remote-first team worldwide" },
                 ].map((item, i) => (
@@ -192,10 +192,10 @@ export default function ContactPage() {
           <div className="space-y-4">
             {[
               { q: "How quickly do you respond to support requests?", a: "We typically respond within 4-6 hours during business hours (Mon-Fri, 9AM-6PM EST). For urgent issues, please mark your request as 'Urgent' in the subject line." },
-              { q: "Can I schedule a demo with your team?", a: "Absolutely! Book a 15-minute demo at socialpilot.io/demo or email sales@socialpilot.io. We'd love to show you around." },
+              { q: "Can I schedule a demo with your team?", a: "Absolutely! Book a 15-minute demo at smtools.online/demo or email sales@smtools.online. We'd love to show you around." },
               { q: "Do you offer discounts for non-profits or educational institutions?", a: "Yes! We offer 50% off for verified non-profits and educational institutions. Contact us with your organization details to apply." },
               { q: "I found a bug. How do I report it?", a: "Please use the form above and select 'Technical Support' as the subject. Include steps to reproduce, browser/OS version, and screenshots if possible." },
-              { q: "Can I suggest a new feature?", a: "We love feature requests! Submit them via the form above with 'Feature Request' in the subject, or email product@socialpilot.io." },
+              { q: "Can I suggest a new feature?", a: "We love feature requests! Submit them via the form above with 'Feature Request' in the subject, or email product@smtools.online." },
             ].map((faq, i) => (
               <details key={i} className="group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <summary className="flex items-center justify-between p-6 cursor-pointer list-none">
@@ -222,7 +222,7 @@ export default function ContactPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <span className="font-semibold text-lg">SocialPilot</span>
+                <span className="font-semibold text-lg">SMTools</span>
               </div>
               <p className="text-slate-400 text-sm">The fastest way to schedule &amp; publish to 5 platforms.</p>
             </div>
@@ -254,7 +254,7 @@ export default function ContactPage() {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-            © 2024 SocialPilot. All rights reserved.
+            © 2024 SMTools. All rights reserved.
           </div>
         </div>
       </footer>

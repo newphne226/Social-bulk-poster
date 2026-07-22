@@ -5,7 +5,7 @@ export async function GET() {
   return NextResponse.json({
     status: "ok",
     timestamp: new Date().toISOString(),
-    service: "socialpilot-api",
+    service: "smtools-api",
     version: "1.0.0",
   });
 }

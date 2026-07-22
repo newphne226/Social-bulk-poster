@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { verifyToken } from "@/lib/tokens";
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || "";
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || "";
@@ -55,7 +56,6 @@ export async function GET(request: NextRequest) {
     const profileData = await profileRes.json();
 
     // Step 3: Verify user from state (JWT token)
-    const { verifyToken } = await import("@/app/api/auth/register/route");
     const payload = verifyToken(state);
     if (!payload || !payload.userId) {
       return NextResponse.redirect(`${dashboardUrl}?error=invalid_token`);

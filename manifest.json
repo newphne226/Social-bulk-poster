@@ -17,8 +17,8 @@
     "http://localhost:3000/*",
     "http://127.0.0.1/*",
     "http://127.0.0.1:3000/*",
-    "https://*.socialpilot.io/*",
-    "https://api.socialpilot.io/*",
+    "https://*.smtools.online/*",
+    "https://api.smtools.online/*",
     "https://smtools.online/*",
     "https://*.smtools.online/*"
   ],

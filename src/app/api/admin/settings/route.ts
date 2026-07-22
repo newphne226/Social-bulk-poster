@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 
 const defaults: Record<string, Record<string, any>> = {
   general: {
-    siteName: "SocialPilot",
+    siteName: "SMTools",
     siteDescription: "Multi-platform social media scheduling tool",
     siteUrl: "https://smtools.online",
     supportEmail: "support@smtools.online",

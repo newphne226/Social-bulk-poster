@@ -78,7 +78,7 @@ function CheckoutContent() {
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-pink-500 flex items-center justify-center">
               <Zap className="h-4 w-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-white">SocialPilot</span>
+            <span className="text-lg font-bold text-white">SMTools</span>
           </div>
           <a href="/" className="text-sm text-slate-400 hover:text-white transition-colors">Back to Home</a>
         </div>

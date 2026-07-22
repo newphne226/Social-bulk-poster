@@ -18,14 +18,14 @@ export default function AboutPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-semibold text-lg text-slate-900 dark:text-white">SocialPilot</span>
+              <span className="font-semibold text-lg text-slate-900 dark:text-white">SMTools</span>
             </a>
             <div className="hidden md:flex items-center gap-6">
               <a href="/" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Home</a>
               <a href="/blog" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Blog</a>
               <a href="/careers" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Careers</a>
               <a href="/contact" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Contact</a>
-              <a href="https://chrome.google.com/webstore/detail/socialpilot" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-amber-500/25">Get Extension</a>
+              <a href="https://chrome.google.com/webstore/detail/smtools" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-amber-500/25">Get Extension</a>
             </div>
           </div>
         </nav>
@@ -48,11 +48,11 @@ export default function AboutPage() {
           </h1>
 
           <p className="text-lg text-slate-600 dark:text-slate-300 mb-10 max-w-2xl mx-auto">
-            SocialPilot was born from a frustrating problem: scheduling social media posts across multiple platforms was too time-consuming. We built a Chrome extension that lets you post to Facebook, Instagram, X, LinkedIn, and Pinterest in seconds — directly from any webpage.
+            SMTools was born from a frustrating problem: scheduling social media posts across multiple platforms was too time-consuming. We built a Chrome extension that lets you post to Facebook, Instagram, X, LinkedIn, and Pinterest in seconds — directly from any webpage.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="https://chrome.google.com/webstore/detail/socialpilot" target="_blank" rel="noopener noreferrer">
+            <a href="https://chrome.google.com/webstore/detail/smtools" target="_blank" rel="noopener noreferrer">
               <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white shadow-xl shadow-amber-500/30 px-8 py-4 text-lg">
                 <Chrome className="h-5 w-5 mr-2" />
                 Get the Extension — Free
@@ -80,10 +80,10 @@ export default function AboutPage() {
                   Managing social media should not mean logging into five different apps, copying and pasting content, and manually adjusting formats for each platform. We thought there had to be a better way.
                 </p>
                 <p>
-                  So we built SocialPilot — a lightweight Chrome extension that sits right in your browser. Write your post once, pick your platforms, and schedule it in seconds. Our AI engine generates captions, hashtags, and optimizes posting times automatically.
+                  So we built SMTools — a lightweight Chrome extension that sits right in your browser. Write your post once, pick your platforms, and schedule it in seconds. Our AI engine generates captions, hashtags, and optimizes posting times automatically.
                 </p>
                 <p>
-                  Today, thousands of creators, marketers, and small businesses use SocialPilot to save hours every week on social media management.
+                  Today, thousands of creators, marketers, and small businesses use SMTools to save hours every week on social media management.
                 </p>
               </div>
             </div>
@@ -129,7 +129,7 @@ export default function AboutPage() {
               {
                 icon: Target,
                 title: "Simplicity Wins",
-                desc: "Powerful tools should not require a manual. Every feature in SocialPilot is designed to be intuitive from the first click."
+                desc: "Powerful tools should not require a manual. Every feature in SMTools is designed to be intuitive from the first click."
               },
               {
                 icon: Shield,
@@ -154,12 +154,12 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Why SocialPilot */}
+      {/* Why SMTools */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white dark:bg-slate-950">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-              Why Choose <span className="bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent">SocialPilot</span>
+              Why Choose <span className="bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent">SMTools</span>
             </h2>
           </div>
 
@@ -215,13 +215,13 @@ export default function AboutPage() {
               Ready to Simplify Your Social Media?
             </h2>
             <p className="text-amber-100 text-lg mb-8 max-w-lg mx-auto">
-              Join thousands of creators and businesses saving hours every week with SocialPilot.
+              Join thousands of creators and businesses saving hours every week with SMTools.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href="https://chrome.google.com/webstore/detail/socialpilot" target="_blank" rel="noopener noreferrer">
+              <a href="https://chrome.google.com/webstore/detail/smtools" target="_blank" rel="noopener noreferrer">
                 <Button size="lg" className="w-full sm:w-auto bg-white text-amber-600 hover:bg-amber-50 px-8 py-4 text-lg font-semibold shadow-xl">
                   <Chrome className="h-5 w-5 mr-2" />
-                  Get SocialPilot Free
+                  Get SMTools Free
                 </Button>
               </a>
               <a href="/contact">
@@ -249,7 +249,7 @@ export default function AboutPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <span className="font-semibold text-lg">SocialPilot</span>
+                <span className="font-semibold text-lg">SMTools</span>
               </div>
               <p className="text-slate-400 text-sm">The fastest way to schedule &amp; publish to 5 platforms.</p>
             </div>
@@ -281,7 +281,7 @@ export default function AboutPage() {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-            &copy; 2024 SocialPilot. All rights reserved.
+            &copy; 2024 SMTools. All rights reserved.
           </div>
         </div>
       </footer>

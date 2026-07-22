@@ -82,53 +82,53 @@ export default function PaymentsPage() {
       case "FAILED": return "bg-red-500/10 text-red-400";
       case "REFUNDED": return "bg-purple-500/10 text-purple-400";
       case "PARTIALLY_REFUNDED": return "bg-blue-500/10 text-blue-400";
-      default: return "bg-slate-700 text-slate-300";
+      default: return "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300";
     }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">Payment Management</h1>
-        <p className="text-sm text-slate-400">{total} total transactions</p>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Payment Management</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{total} total transactions</p>
       </div>
 
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-green-500/10 flex items-center justify-center"><DollarSign className="h-5 w-5 text-green-500" /></div>
               <div>
-                <p className="text-xs text-slate-500">Total Revenue</p>
-                <p className="text-lg font-bold text-white">{formatAmount(stats.totalRevenue)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total Revenue</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{formatAmount(stats.totalRevenue)}</p>
               </div>
             </div>
           </div>
-          <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center"><RotateCcw className="h-5 w-5 text-purple-500" /></div>
               <div>
-                <p className="text-xs text-slate-500">Total Refunded</p>
-                <p className="text-lg font-bold text-white">{formatAmount(stats.totalRefunded)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total Refunded</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{formatAmount(stats.totalRefunded)}</p>
               </div>
             </div>
           </div>
-          <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-yellow-500/10 flex items-center justify-center"><Clock className="h-5 w-5 text-yellow-500" /></div>
               <div>
-                <p className="text-xs text-slate-500">Pending</p>
-                <p className="text-lg font-bold text-white">{stats.pendingCount} <span className="text-sm text-slate-400">({formatAmount(stats.pendingAmount)})</span></p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Pending</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{stats.pendingCount} <span className="text-sm text-gray-500 dark:text-gray-400">({formatAmount(stats.pendingAmount)})</span></p>
               </div>
             </div>
           </div>
-          <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center"><XCircle className="h-5 w-5 text-red-500" /></div>
               <div>
-                <p className="text-xs text-slate-500">Failed</p>
-                <p className="text-lg font-bold text-white">{stats.failedCount}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Failed</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{stats.failedCount}</p>
               </div>
             </div>
           </div>
@@ -142,7 +142,7 @@ export default function PaymentsPage() {
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
               activeTab === tab.key
                 ? "bg-amber-500/20 text-amber-500 border border-amber-500/30"
-                : "bg-slate-800/50 text-slate-400 border border-slate-700 hover:text-white"
+                : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-800 hover:text-gray-900 dark:hover:text-white"
             }`}>
             <tab.icon className="h-3.5 w-3.5" /> {tab.label}
           </button>
@@ -152,13 +152,13 @@ export default function PaymentsPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -trangray-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
           <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search by name, email, or transaction ID..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500" />
         </div>
         <select value={methodFilter} onChange={(e) => { setMethodFilter(e.target.value); setPage(1); }}
-          className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+          className="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
           <option value="">All Methods</option>
           <option value="CARD">Credit Card</option>
           <option value="CRYPTO">Crypto</option>
@@ -175,53 +175,53 @@ export default function PaymentsPage() {
       )}
 
       {/* Payments Table */}
-      <div className="bg-slate-800/50 rounded-2xl border border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-slate-700">
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Method</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Plan</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Date</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-400 uppercase">Actions</th>
+              <tr className="border-b border-gray-200 dark:border-gray-800">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Customer</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Method</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Plan</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {loading ? (
                 <tr><td colSpan={7} className="px-6 py-12 text-center"><div className="h-6 w-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" /></td></tr>
               ) : payments.length === 0 ? (
-                <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400">No payments found</td></tr>
+                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">No payments found</td></tr>
               ) : payments.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => router.push(`/admin/payments/${p.id}`)}>
+                <tr key={p.id} className="hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer" onClick={() => router.push(`/admin/payments/${p.id}`)}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="h-9 w-9 rounded-full bg-gradient-to-br from-amber-500 to-pink-500 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                         {(p.user.name ?? p.user.email).charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{p.user.name ?? "No Name"}</p>
-                        <p className="text-xs text-slate-400 truncate">{p.user.email}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{p.user.name ?? "No Name"}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{p.user.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm font-medium text-white">{formatAmount(p.amount)}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{formatAmount(p.amount)}</p>
                     {p.refundAmount > 0 && <p className="text-xs text-purple-400">-{formatAmount(p.refundAmount)} refunded</p>}
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-2 py-1 rounded-lg text-xs font-medium bg-slate-700 text-slate-300">
+                    <span className="px-2 py-1 rounded-lg text-xs font-medium bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
                       {methodLabels[p.method] ?? p.method}
                     </span>
                   </td>
                   <td className="px-6 py-4"><span className={`px-2 py-1 rounded-lg text-xs font-medium ${statusColor(p.status)}`}>{p.status.replace("_", " ")}</span></td>
-                  <td className="px-6 py-4 text-sm text-slate-300">{p.subscription?.plan?.name ?? "—"}</td>
-                  <td className="px-6 py-4 text-sm text-slate-400">{formatDate(p.createdAt)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{p.subscription?.plan?.name ?? "—"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{formatDate(p.createdAt)}</td>
                   <td className="px-6 py-4">
                     <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/payments/${p.id}`); }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" title="View Details">
+                      className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors" title="View Details">
                       <Eye className="h-4 w-4" />
                     </button>
                   </td>
@@ -234,12 +234,12 @@ export default function PaymentsPage() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-400">Showing {payments.length === 0 ? 0 : (page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Showing {payments.length === 0 ? 0 : (page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total}</p>
         <div className="flex gap-2">
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-sm disabled:opacity-50">Previous</button>
+            className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-800 text-gray-600 dark:text-gray-300 text-sm disabled:opacity-50">Previous</button>
           <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-sm disabled:opacity-50">Next</button>
+            className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-800 text-gray-600 dark:text-gray-300 text-sm disabled:opacity-50">Next</button>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 // =====================================================================
-// SocialPilot Chrome Extension — Options page logic (v3)
+// SMTools Chrome Extension — Options page logic (v3)
 // =====================================================================
 // v3 changes:
 //   • API base URL config — point the extension at any deployment
@@ -91,7 +91,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const logoutBtn = document.getElementById("logout");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
-      if (!confirm("Log out of SocialPilot?")) return;
+      if (!confirm("Log out of SMTools?")) return;
       logoutBtn.disabled = true;
       logoutBtn.textContent = "Logging out...";
       try {

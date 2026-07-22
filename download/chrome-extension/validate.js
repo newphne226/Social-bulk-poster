@@ -20,7 +20,7 @@ function check(name, condition, fix = "") {
   }
 }
 
-console.log("\n=== SocialPilot Chrome Extension — Validation ===\n");
+console.log("\n=== SMTools Chrome Extension — Validation ===\n");
 
 // 1. manifest.json is valid JSON and has required fields
 console.log("1. Manifest validation");
@@ -105,7 +105,7 @@ if (fs.existsSync(swPath)) {
   check("SW reads 'posts' field from sync (not scheduledPosts)", sw.includes("posts: data.posts"));
   check("SW checks tokenExpiresAt before API calls", sw.includes("tokenExpiresAt"));
   check("SW sends deviceId in heartbeat", sw.includes("deviceId"));
-  check("SW does NOT redirect to socialpilot.io/dashboard", !sw.includes("https://socialpilot.io/dashboard"));
+  check("SW does NOT redirect to smtools.online/dashboard", !sw.includes("https://smtools.online/dashboard"));
 }
 
 // 5. Popup HTML/JS consistency
@@ -120,13 +120,13 @@ check("popup.html has signup form (in-extension registration)", popupHtml.includ
 check("popup.html has Google button", popupHtml.includes('id="google-btn"'));
 check("popup.html has password toggle (Sign In)", popupHtml.includes('id="toggle-pw"'));
 check("popup.html has password toggle (Sign Up)", popupHtml.includes('id="su-toggle-pw"'));
-check("popup.html has forgot password link (local, not socialpilot.io)", popupHtml.includes('id="forgot-link"') && !popupHtml.includes("socialpilot.io/forgot-password"));
+check("popup.html has forgot password link (local, not smtools.online)", popupHtml.includes('id="forgot-link"') && !popupHtml.includes("smtools.online/forgot-password"));
 check("popup.html has remember me checkbox", popupHtml.includes('id="remember-me"'));
 check("popup.html has terms checkbox in signup", popupHtml.includes('id="su-terms"'));
 check("popup.html has confirm password field", popupHtml.includes('id="su-confirm"'));
 check("popup.html loads popup.js as module", popupHtml.includes('<script src="popup.js" type="module">'));
-check("popup.html does NOT redirect to socialpilot.io/register", !popupHtml.includes("socialpilot.io/register"));
-check("popup.html does NOT hardcode socialpilot.io in links", !popupHtml.includes("socialpilot.io/terms") && !popupHtml.includes("socialpilot.io/privacy"));
+check("popup.html does NOT redirect to smtools.online/register", !popupHtml.includes("smtools.online/register"));
+check("popup.html does NOT hardcode smtools.online in links", !popupHtml.includes("smtools.online/terms") && !popupHtml.includes("smtools.online/privacy"));
 
 check("popup.js has handleLogin", popupJs.includes("function handleLogin"));
 check("popup.js has handleSignup", popupJs.includes("function handleSignup"));
@@ -137,7 +137,7 @@ check("popup.js has sendMessage helper", popupJs.includes("function sendMessage"
 check("popup.js has chrome.runtime.lastError check", popupJs.includes("chrome.runtime.lastError"));
 check("popup.js has navigator.onLine check", popupJs.includes("navigator.onLine"));
 check("popup.js sends AUTH_REGISTER message", popupJs.includes("AUTH_REGISTER"));
-check("popup.js does NOT redirect to socialpilot.io/register", !popupJs.includes("socialpilot.io/register"));
+check("popup.js does NOT redirect to smtools.online/register", !popupJs.includes("smtools.online/register"));
 check("popup.js imports config from lib", popupJs.includes("from \"../lib/config.js\""));
 check("popup.js sets forgot/terms/privacy links dynamically", popupJs.includes("forgot-link") && popupJs.includes("terms-link"));
 check("popup.js confirm validator handles empty password field", popupJs.includes("Please enter your password first"));
@@ -167,8 +167,8 @@ const requiredPerms = ["storage", "alarms", "notifications", "contextMenus", "ac
 requiredPerms.forEach((p) => {
   check(`Permission "${p}" declared`, (manifest.permissions || []).includes(p));
 });
-check("host_permissions includes api.socialpilot.io",
-  (manifest.host_permissions || []).some(h => h.includes("socialpilot.io")));
+check("host_permissions includes api.smtools.online",
+  (manifest.host_permissions || []).some(h => h.includes("smtools.online")));
 
 // 9. TypeScript syntax check (CRITICAL — TS annotations break Chrome extension JS files)
 console.log("\n9. TypeScript syntax check (CRITICAL)");

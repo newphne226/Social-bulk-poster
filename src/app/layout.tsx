@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LiveChat } from "@/components/live-chat";
+import SaleNotification from "@/components/sale-notification";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SocialPilot — Multi-Platform Social Media Scheduling SaaS",
+  title: "SMTools — Multi-Platform Social Media Scheduling SaaS",
   description:
     "Schedule, publish, and analyze posts across Facebook, Instagram, X, LinkedIn, and Pinterest. AI-powered captions, multi-account management, and a Chrome extension for on-the-go posting.",
   keywords: [
@@ -27,16 +28,16 @@ export const metadata: Metadata = {
     "AI captions",
     "content scheduling",
   ],
-  authors: [{ name: "SocialPilot Team" }],
+  authors: [{ name: "SMTools Team" }],
   openGraph: {
-    title: "SocialPilot — Multi-Platform Social Media Scheduling",
+    title: "SMTools — Multi-Platform Social Media Scheduling",
     description: "Schedule, publish, and analyze posts across all your social accounts from one place.",
-    siteName: "SocialPilot",
+    siteName: "SMTools",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SocialPilot — Multi-Platform Social Media Scheduling",
+    title: "SMTools — Multi-Platform Social Media Scheduling",
     description: "Schedule, publish, and analyze posts across all your social accounts.",
   },
 };
@@ -58,6 +59,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <SaleNotification />
           <LiveChat />
           <Toaster richColors position="top-right" />
         </ThemeProvider>

@@ -1,15 +1,15 @@
 // =====================================================================
-// SocialPilot Chrome Extension — Background Service Worker (MV3, v4)
+// SMTools Chrome Extension — Background Service Worker (MV3, v4)
 // =====================================================================
 // v4 changes from v3:
 //   • API_BASE reloaded on every message (so options-page changes take
 //     effect immediately without reloading the extension).
 //   • OPEN_DASHBOARD and QUICK_SCHEDULE_PAGE now open the LOCAL app
-//     (derived from API_BASE) instead of socialpilot.io.
+//     (derived from API_BASE) instead of smtools.online.
 //   • Notification iconUrl uses chrome.runtime.getURL() for absolute path.
 //   • Token expiry checked before every API call (not just on 401).
 //   • Heartbeat now sends a deviceId so the server can track per-device.
-//   • Forgot-password link in popup opens the local app, not socialpilot.io.
+//   • Forgot-password link in popup opens the local app, not smtools.online.
 // =====================================================================
 
 const DEFAULT_API_BASE = "https://smtools.online/api";
@@ -20,9 +20,9 @@ async function getApiBase() {
 }
 
 let API_BASE = "https://smtools.online/api";
-const SYNC_ALARM = "socialpilot-sync";
-const HEARTBEAT_ALARM = "socialpilot-heartbeat";
-const TOKEN_REFRESH_ALARM = "socialpilot-token-refresh";
+const SYNC_ALARM = "smtools-sync";
+const HEARTBEAT_ALARM = "smtools-heartbeat";
+const TOKEN_REFRESH_ALARM = "smtools-token-refresh";
 
 // Helper: derive the web app origin from API_BASE (strip /api)
 async function webAppOrigin() {
@@ -42,14 +42,14 @@ async function setupAlarms() {
   chrome.alarms.create(SYNC_ALARM, { periodInMinutes: syncInterval });
   chrome.alarms.create(HEARTBEAT_ALARM, { periodInMinutes: 1 });
   chrome.alarms.create(TOKEN_REFRESH_ALARM, { periodInMinutes: 30 });
-  console.log("[SocialPilot] Alarms created with syncInterval:", syncInterval);
+  console.log("[SMTools] Alarms created with syncInterval:", syncInterval);
 }
 
 // ----- Lifecycle -----
 chrome.runtime.onInstalled.addListener(async (details) => {
   API_BASE = await getApiBase();
-  console.log("[SocialPilot] API base:", API_BASE);
-  console.log("[SocialPilot] Installed", details);
+  console.log("[SMTools] API base:", API_BASE);
+  console.log("[SMTools] Installed", details);
 
   await setupAlarms();
 
@@ -61,12 +61,12 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       title: (chrome.i18n?.getMessage?.(msgKey) || fallback),
       contexts,
     });
-    mk("socialpilot-schedule-page", "ctxSchedulePage", ["page"], "Schedule this page with SocialPilot");
-    mk("socialpilot-schedule-selection", "ctxScheduleSelection", ["selection"], "Schedule selection with SocialPilot");
-    mk("socialpilot-schedule-image", "ctxScheduleImage", ["image"], "Schedule this image with SocialPilot");
-    mk("socialpilot-schedule-link", "ctxScheduleLink", ["link"], "Schedule this link with SocialPilot");
+    mk("smtools-schedule-page", "ctxSchedulePage", ["page"], "Schedule this page with SMTools");
+    mk("smtools-schedule-selection", "ctxScheduleSelection", ["selection"], "Schedule selection with SMTools");
+    mk("smtools-schedule-image", "ctxScheduleImage", ["image"], "Schedule this image with SMTools");
+    mk("smtools-schedule-link", "ctxScheduleLink", ["link"], "Schedule this link with SMTools");
   } catch (e) {
-    console.warn("[SocialPilot] contextMenus error", e);
+    console.warn("[SMTools] contextMenus error", e);
   }
 
   // On first install, open the local web app's welcome page
@@ -78,7 +78,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
 chrome.runtime.onStartup.addListener(async () => {
   API_BASE = await getApiBase();
-  console.log("[SocialPilot] Browser started — resuming sync. API base:", API_BASE);
+  console.log("[SMTools] Browser started — resuming sync. API base:", API_BASE);
   await setupAlarms();
 });
 
@@ -101,7 +101,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         break;
     }
   } catch (e) {
-    console.warn(`[SocialPilot] alarm ${alarm.name} failed`, e);
+    console.warn(`[SMTools] alarm ${alarm.name} failed`, e);
   }
 });
 
@@ -134,7 +134,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab?.id) return;
       if (!tab.url || /^(chrome|edge|about|chrome-extension):/i.test(tab.url)) {
-        console.warn("[SocialPilot] Cannot run on this page:", tab.url);
+        console.warn("[SMTools] Cannot run on this page:", tab.url);
         return;
       }
       const [result] = await chrome.scripting.executeScript({
@@ -151,7 +151,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       });
       await tryOpenPopup();
     } catch (e) {
-      console.warn("[SocialPilot] quick-schedule-from-page failed", e);
+      console.warn("[SMTools] quick-schedule-from-page failed", e);
     }
   }
 });
@@ -164,7 +164,7 @@ async function tryOpenPopup() {
       return true;
     }
   } catch (e) {
-    console.warn("[SocialPilot] openPopup failed", e);
+    console.warn("[SMTools] openPopup failed", e);
   }
   return false;
 }
@@ -203,7 +203,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             const data = await res.json();
             await setToken(data.token, remember !== false);
             await chrome.storage.local.set({ user: data.user, subscription: data.subscription });
-            syncData(data.token).catch((e) => console.warn("[SocialPilot] initial sync failed", e));
+            syncData(data.token).catch((e) => console.warn("[SMTools] initial sync failed", e));
             sendResponse({ ok: true, user: data.user });
           } catch (e) {
             sendResponse({ ok: false, error: String(e.message || e) });
@@ -234,7 +234,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             }
             await setToken(data.token, true);
             await chrome.storage.local.set({ user: data.user, subscription: data.subscription });
-            syncData(data.token).catch((e) => console.warn("[SocialPilot] initial sync failed", e));
+            syncData(data.token).catch((e) => console.warn("[SMTools] initial sync failed", e));
             sendResponse({ ok: true, user: data.user });
           } catch (e) {
             sendResponse({ ok: false, error: String(e.message || e) });
@@ -326,7 +326,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         // -------- OPTIONS PAGE: API URL changed --------
         case "API_URL_CHANGED":
           API_BASE = await getApiBase();
-          console.log("[SocialPilot] API base updated to:", API_BASE);
+          console.log("[SMTools] API base updated to:", API_BASE);
           sendResponse({ ok: true, apiBase: API_BASE });
           return;
 
@@ -334,7 +334,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           sendResponse({ ok: false, error: `Unknown message type: ${message.type}` });
       }
     } catch (err) {
-      console.error("[SocialPilot] message handler error", err);
+      console.error("[SMTools] message handler error", err);
       sendResponse({ ok: false, error: String(err.message || err) });
     }
   })();
@@ -349,7 +349,7 @@ async function getToken() {
   const { token, tokenExpiresAt } = await chrome.storage.local.get(["token", "tokenExpiresAt"]);
   // Bug #10 fix: proactively check expiry
   if (token && tokenExpiresAt && Date.now() > tokenExpiresAt) {
-    console.log("[SocialPilot] Token expired (client-side check) — refreshing...");
+    console.log("[SMTools] Token expired (client-side check) — refreshing...");
     const refreshed = await refreshToken();
     if (!refreshed) {
       await chrome.storage.local.remove("token");
@@ -376,7 +376,7 @@ async function maybeRefreshToken() {
   if (!token) return false;
   // Refresh if we're within 1 hour of expiry
   if (!tokenExpiresAt || Date.now() > tokenExpiresAt - 60 * 60 * 1000) {
-    console.log("[SocialPilot] Token nearing expiry — refreshing proactively");
+    console.log("[SMTools] Token nearing expiry — refreshing proactively");
     return await refreshToken();
   }
   return false;
@@ -449,7 +449,7 @@ async function syncData(token) {
           priority: 2,
         });
       } catch (e) {
-        console.warn("[SocialPilot] notification create failed", e);
+        console.warn("[SMTools] notification create failed", e);
       }
       await chrome.storage.local.set({ lastSeenNotificationId: n.id });
     }
@@ -459,7 +459,7 @@ async function syncData(token) {
       await chrome.action.setBadgeBackgroundColor({ color: "#f59e0b" });
     } catch {}
   } catch (e) {
-    console.warn("[SocialPilot] sync failed", e);
+    console.warn("[SMTools] sync failed", e);
   }
 }
 
@@ -493,7 +493,7 @@ async function heartbeat(token) {
       } catch {}
     }
   } catch (e) {
-    console.warn("[SocialPilot] heartbeat failed", e);
+    console.warn("[SMTools] heartbeat failed", e);
   }
 }
 
@@ -523,7 +523,7 @@ async function refreshToken() {
     });
     return true;
   } catch (e) {
-    console.warn("[SocialPilot] token refresh failed — user must re-login", e);
+    console.warn("[SMTools] token refresh failed — user must re-login", e);
     await chrome.storage.local.remove("token");
     return false;
   }
@@ -532,7 +532,7 @@ async function refreshToken() {
 // Listen for clicks on Chrome notifications
 chrome.notifications.onClicked.addListener((notificationId) => {
   chrome.notifications.clear(notificationId);
-  // Bug #7 fix: open local app, not socialpilot.io
+  // Bug #7 fix: open local app, not smtools.online
   (async () => {
     const origin = await webAppOrigin();
     chrome.tabs.create({ url: `${origin}/dashboard?from=notification` });
@@ -542,6 +542,6 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 // Listen for FORCE_LOGOUT broadcast
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg?.type === "FORCE_LOGOUT") {
-    console.warn("[SocialPilot] Force logout:", msg.reason);
+    console.warn("[SMTools] Force logout:", msg.reason);
   }
 });

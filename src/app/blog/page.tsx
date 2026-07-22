@@ -76,14 +76,14 @@ export default function BlogPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-semibold text-lg text-slate-900 dark:text-white">SocialPilot</span>
+              <span className="font-semibold text-lg text-slate-900 dark:text-white">SMTools</span>
             </div>
             <nav className="hidden md:flex items-center gap-6">
               <a href="/" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Home</a>
               <a href="/blog" className="text-sm font-medium text-amber-600 dark:text-amber-400">Blog</a>
               <a href="/features" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Features</a>
               <a href="/pricing" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Pricing</a>
-              <a href="https://chrome.google.com/webstore/detail/socialpilot" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-amber-500/25">Get Extension</a>
+              <a href="https://chrome.google.com/webstore/detail/smtools" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-amber-500/25">Get Extension</a>
             </nav>            </div>
           </div>
         </header>
@@ -96,7 +96,7 @@ export default function BlogPage() {
             <span>Latest insights on social media marketing</span>
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
-            SocialPilot <span className="bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent">Blog</span>
+            SMTools <span className="bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent">Blog</span>
           </h1>
           <p className="text-lg text-slate-600 dark:text-slate-300 mb-10 max-w-2xl mx-auto">
             Expert tips, strategies, and tutorials for growing your social media presence. Written by creators, for creators.
@@ -229,7 +229,7 @@ export default function BlogPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <span className="font-semibold text-lg">SocialPilot</span>
+                <span className="font-semibold text-lg">SMTools</span>
               </div>
               <p className="text-slate-400 text-sm">The fastest way to schedule &amp; publish to 5 platforms.</p>
             </div>
@@ -261,7 +261,7 @@ export default function BlogPage() {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-            © 2024 SocialPilot. All rights reserved.
+            © 2024 SMTools. All rights reserved.
           </div>
         </div>
       </footer>

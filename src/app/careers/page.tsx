@@ -58,7 +58,7 @@ export default function CareersPage() {
       location: "Remote (US)",
       type: "Full-time",
       experience: "3+ years",
-      description: "Help customers succeed with SocialPilot. Onboard new users, reduce churn, and gather product feedback.",
+      description: "Help customers succeed with SMTools. Onboard new users, reduce churn, and gather product feedback.",
       requirements: ["SaaS experience", "Customer communication", "Data analysis", "Intercom/Zendesk"],
       benefits: ["Competitive salary + equity", "401k matching", "Health + dental + vision", "Home office stipend", "Learning budget"],
     },
@@ -87,7 +87,7 @@ export default function CareersPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2-2V5a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-semibold text-lg text-slate-900 dark:text-white">SocialPilot</span>
+              <span className="font-semibold text-lg text-slate-900 dark:text-white">SMTools</span>
             </div>
             <div className="flex items-center gap-4">
               <a href="/features" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Features</a>
@@ -247,7 +247,7 @@ export default function CareersPage() {
               Open <span className="bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent">Roles</span>
             </h2>
             <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-              Don't see your dream role? We're always looking for exceptional talent. Email us at jobs@socialpilot.io
+              Don't see your dream role? We're always looking for exceptional talent. Email us at jobs@smtools.online
             </p>
           </div>
 
@@ -266,7 +266,7 @@ export default function CareersPage() {
                       <p className="text-slate-600 dark:text-slate-400 mt-1">{job.experience} experience</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Button variant="outline" size="sm" onClick={() => window.open(`mailto:jobs@socialpilot.io?subject=Application: ${job.title}`, "_blank")}>
+                      <Button variant="outline" size="sm" onClick={() => window.open(`mailto:jobs@smtools.online?subject=Application: ${job.title}`, "_blank")}>
                         Apply Now
                       </Button>
                       <Button variant="ghost" size="sm">
@@ -323,7 +323,7 @@ export default function CareersPage() {
               We're looking for passionate people who want to make social media management effortless for millions of creators.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="w-full sm:w-auto bg-white text-amber-600 hover:bg-amber-50 px-8 py-4 text-lg font-semibold shadow-xl" onClick={() => window.open("mailto:jobs@socialpilot.io", "_blank")}>
+              <Button size="lg" className="w-full sm:w-auto bg-white text-amber-600 hover:bg-amber-50 px-8 py-4 text-lg font-semibold shadow-xl" onClick={() => window.open("mailto:jobs@smtools.online", "_blank")}>
                 <Mail className="h-5 w-5 mr-2" />
                 Apply Now
               </Button>
@@ -349,7 +349,7 @@ export default function CareersPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <span className="font-semibold text-lg">SocialPilot</span>
+                <span className="font-semibold text-lg">SMTools</span>
               </div>
               <p className="text-slate-400 text-sm">The fastest way to schedule &amp; publish to 5 platforms.</p>
             </div>
@@ -380,7 +380,7 @@ export default function CareersPage() {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-            © 2024 SocialPilot. All rights reserved.
+            © 2024 SMTools. All rights reserved.
           </div>
         </div>
       </footer>

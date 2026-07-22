@@ -100,7 +100,7 @@ async function main() {
 
   // ----- Demo admin user -----
   console.log("\n👤 Creating demo admin user...");
-  const adminEmail = "alex@socialpilot.io";
+  const adminEmail = "alex@smtools.online";
   const adminPassword = "admin123";
   let admin = await db.user.findUnique({ where: { email: adminEmail } });
   if (!admin) {

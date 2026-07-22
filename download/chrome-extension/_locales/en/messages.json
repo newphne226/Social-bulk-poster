@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "SocialPilot — Social Media Scheduler",
+    "message": "SMTools — Social Media Scheduler",
     "description": "Extension name shown in the Chrome toolbar and extensions page."
   },
   "extDescription": {
@@ -8,11 +8,11 @@
     "description": "Short description shown under the extension name on chrome://extensions and the Web Store listing."
   },
   "actionTitle": {
-    "message": "SocialPilot",
+    "message": "SMTools",
     "description": "Tooltip shown when hovering the toolbar icon."
   },
   "commandOpenPopup": {
-    "message": "Open SocialPilot popup",
+    "message": "Open SMTools popup",
     "description": "Description of the keyboard shortcut to open the popup."
   },
   "commandQuickSchedule": {
@@ -20,23 +20,23 @@
     "description": "Description of the keyboard shortcut to schedule the active tab."
   },
   "ctxSchedulePage": {
-    "message": "Schedule this page with SocialPilot",
+    "message": "Schedule this page with SMTools",
     "description": "Right-click menu item for the whole page."
   },
   "ctxScheduleSelection": {
-    "message": "Schedule selection with SocialPilot",
+    "message": "Schedule selection with SMTools",
     "description": "Right-click menu item for selected text."
   },
   "ctxScheduleImage": {
-    "message": "Schedule this image with SocialPilot",
+    "message": "Schedule this image with SMTools",
     "description": "Right-click menu item for images."
   },
   "ctxScheduleLink": {
-    "message": "Schedule this link with SocialPilot",
+    "message": "Schedule this link with SMTools",
     "description": "Right-click menu item for links."
   },
   "loginTitle": {
-    "message": "SocialPilot",
+    "message": "SMTools",
     "description": "Brand title shown on the login screen."
   },
   "loginSubtitle": {
@@ -59,7 +59,7 @@
     "message": "Don't have an account?"
   },
   "loginRegisterLink": {
-    "message": "Register on socialpilot.io →"
+    "message": "Register on smtools.online →"
   },
   "loginSecurityNote": {
     "message": "🔒 The extension only supports login. Registration is on the website."

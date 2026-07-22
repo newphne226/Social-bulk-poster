@@ -17,6 +17,7 @@ import {
   Crown,
   Zap,
 } from "lucide-react";
+import ThemeToggle from "@/components/theme-toggle";
 
 const nav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -49,21 +50,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setUser(null);
     }
 
-    // Fetch subscription status
-    fetch("https://smtools.online/api/subscription", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        const plan = d.subscription?.plan || "FREE";
-        const status = d.subscription?.status || "ACTIVE";
-        setSubPlan(plan);
-        setSubStatus(status);
-        localStorage.setItem("sp_subscription", JSON.stringify(d.subscription));
-      })
-      .catch(() => {});
+    async function fetchSubscription() {
+      const t = localStorage.getItem("sp_token");
+      if (!t) return;
+      try {
+        const r = await fetch("/api/subscription", {
+          headers: { Authorization: `Bearer ${t}` },
+          cache: "no-store",
+        });
+        if (r.ok) {
+          const d = await r.json();
+          const plan = d.subscription?.plan || "FREE";
+          const status = d.subscription?.status || "ACTIVE";
+          setSubPlan(plan);
+          setSubStatus(status);
+          localStorage.setItem("sp_subscription", JSON.stringify(d.subscription));
+        }
+      } catch {}
+    }
 
+    fetchSubscription();
     setLoading(false);
+
+    // Re-fetch subscription every 30 seconds so admin plan changes reflect
+    const interval = setInterval(fetchSubscription, 30000);
+
+    return () => clearInterval(interval);
   }, [router]);
 
   const logout = () => {
@@ -75,7 +87,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 transition-colors">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
       </div>
     );
@@ -85,21 +97,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const initials = (user?.name || "U").split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex transition-colors">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Brand */}
-        <div className="h-16 flex items-center gap-3 px-5 border-b border-slate-100">
+        <div className="h-16 flex items-center gap-3 px-5 border-b border-slate-100 dark:border-slate-700">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-pink-500 flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
             </svg>
           </div>
-          <span className="text-lg font-bold text-slate-900">SocialPilot</span>
+          <span className="text-lg font-bold text-slate-900 dark:text-white">SMTools</span>
           <button onClick={() => setSidebarOpen(false)} className="ml-auto lg:hidden text-slate-400 hover:text-slate-600">
             <X size={20} />
           </button>
@@ -107,7 +119,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Plan Badge */}
         {subPlan !== "FREE" && (
-          <div className="px-4 py-2 border-b border-slate-100">
+          <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
             <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
               subStatus === "PENDING_APPROVAL"
                 ? "bg-amber-100 text-amber-700"
@@ -136,8 +148,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   active
-                    ? "bg-amber-50 text-amber-600"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
                 <item.icon size={18} />
@@ -147,15 +159,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
+        {/* Theme Toggle */}
+        <div className="px-3 pb-3">
+          <ThemeToggle className="w-full justify-center" />
+        </div>
+
         {/* User */}
-        <div className="p-4 border-t border-slate-100">
+        <div className="p-4 border-t border-slate-100 dark:border-slate-700">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold">
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-slate-900 truncate">{user?.name || "User"}</div>
-              <div className="text-xs text-slate-400 truncate">{user?.email || ""}</div>
+              <div className="text-sm font-medium text-slate-900 dark:text-white truncate">{user?.name || "User"}</div>
+              <div className="text-xs text-slate-400 dark:text-slate-500 truncate">{user?.email || ""}</div>
             </div>
             <button onClick={logout} className="text-slate-400 hover:text-red-500 transition-colors" title="Log out">
               <LogOut size={16} />
@@ -172,13 +189,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 lg:px-6 shrink-0">
+        <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center px-4 lg:px-6 shrink-0">
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-500 hover:text-slate-700 mr-3">
             <Menu size={20} />
           </button>
-          <h1 className="text-lg font-semibold text-slate-900">{activeLabel}</h1>
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-white">{activeLabel}</h1>
           <div className="ml-auto flex items-center gap-3">
-            <Link href="/" className="text-sm text-slate-500 hover:text-slate-700 hidden sm:block">
+            <Link href="/" className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white hidden sm:block">
               Back to Site
             </Link>
             <button className="relative text-slate-400 hover:text-slate-600">

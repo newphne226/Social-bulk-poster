@@ -1,5 +1,5 @@
 // =====================================================================
-// SocialPilot Chrome Extension — Content Script (v2 — bug-fixed)
+// SMTools Chrome Extension — Content Script (v2 — bug-fixed)
 // =====================================================================
 // v2 changes from v1:
 //   • Removed Ctrl+Shift+S handler — it conflicted with the manifest's
@@ -19,8 +19,8 @@
     return;
   }
   // Guard against double-injection
-  if (window.__SOCIALPILOT_CONTENT_LOADED__) return;
-  window.__SOCIALPILOT_CONTENT_LOADED__ = true;
+  if (window.__SMTOOLS_CONTENT_LOADED__) return;
+  window.__SMTOOLS_CONTENT_LOADED__ = true;
 
   // ----- Page metadata extractor -----
   function getPageMeta() {
@@ -64,14 +64,14 @@
     }
   });
 
-  // ----- Floating "Schedule with SocialPilot" button -----
+  // ----- Floating "Schedule with SMTools" button -----
   let floatingBtn = null;
 
   function showFloatingButton(payload) {
     if (floatingBtn) floatingBtn.remove();
 
     floatingBtn = document.createElement("div");
-    floatingBtn.id = "socialpilot-quick-btn";
+    floatingBtn.id = "smtools-quick-btn";
     floatingBtn.innerHTML = `
       <div class="sp-icon">SP</div>
       <span>Schedule</span>
@@ -108,7 +108,7 @@
           payload: { ...meta, ...(payload || {}) },
         });
       } catch (err) {
-        console.warn("[SocialPilot] sendMessage failed", err);
+        console.warn("[SMTools] sendMessage failed", err);
       }
       floatingBtn.remove();
       floatingBtn = null;
@@ -134,13 +134,13 @@
       const img = e.target;
       if (!(img instanceof HTMLImageElement) || img.width < 200 || img.height < 200) return;
       // Don't show on our own UI
-      if (img.closest("[id^='socialpilot-']")) return;
+      if (img.closest("[id^='smtools-']")) return;
 
       if (currentOverlay) currentOverlay.remove();
       const rect = img.getBoundingClientRect();
       currentOverlay = document.createElement("div");
-      currentOverlay.id = "socialpilot-img-overlay";
-      currentOverlay.innerHTML = "📅 Schedule with SocialPilot";
+      currentOverlay.id = "smtools-img-overlay";
+      currentOverlay.innerHTML = "📅 Schedule with SMTools";
       currentOverlay.style.cssText = `
         position: fixed;
         top: ${rect.top + 8}px; left: ${rect.left + 8}px;
@@ -160,7 +160,7 @@
             payload: { ...getPageMeta(), image: img.src, source: "image-hover" },
           });
         } catch (err) {
-          console.warn("[SocialPilot] sendMessage failed", err);
+          console.warn("[SMTools] sendMessage failed", err);
         }
         currentOverlay.remove();
         currentOverlay = null;
@@ -190,5 +190,5 @@
   // at the browser level — content scripts never see it. Adding a handler
   // here was dead code in v1.
 
-  console.log("[SocialPilot] content script loaded on", location.href);
+  console.log("[SMTools] content script loaded on", location.href);
 })();

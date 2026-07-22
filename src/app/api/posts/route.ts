@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
     publishedAt: post.publishedAt?.toISOString() ?? null,
     mediaUrls: JSON.parse(post.mediaUrls || "[]"),
     hashtags: JSON.parse(post.hashtags || "[]"),
+    mentions: JSON.parse(post.mentions || "[]"),
     retryCount: post.retryCount,
   }));
 
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const {
     caption, platform, accountId, accountIds, type,
-    scheduledAt, mediaUrls, hashtags, status,
+    scheduledAt, mediaUrls, hashtags, mentions, status, publishedAt,
   } = body ?? {};
 
   if (!caption) {
@@ -92,11 +93,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Enforce scheduled-post limit based on plan tier.
-  const scheduledCount = await db.post.count({
-    where: { userId: auth.user.id, status: { in: ["SCHEDULED", "QUEUED"] } },
+  // Enforce total post limit based on plan tier.
+  const totalPostCount = await db.post.count({
+    where: { userId: auth.user.id },
   });
-  const check = canSchedulePost(auth.user.plan, scheduledCount);
+  const check = canSchedulePost(auth.user.plan, totalPostCount);
   if (!check.allowed) {
     return NextResponse.json({ error: check.reason }, { status: 403 });
   }
@@ -129,8 +130,10 @@ export async function POST(request: NextRequest) {
         type: type ?? "TEXT",
         status: status || (scheduledAt ? "SCHEDULED" : "DRAFT"),
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+        publishedAt: publishedAt ? new Date(publishedAt) : (status === "PUBLISHED" ? new Date() : null),
         mediaUrls: JSON.stringify(mediaUrls ?? []),
         hashtags: JSON.stringify(hashtags ?? []),
+        mentions: JSON.stringify(mentions ?? []),
       },
     });
 
@@ -143,9 +146,10 @@ export async function POST(request: NextRequest) {
       status: newPost.status,
       type: newPost.type,
       scheduledAt: newPost.scheduledAt?.toISOString() ?? null,
-      publishedAt: null,
+      publishedAt: newPost.publishedAt?.toISOString() ?? null,
       mediaUrls: mediaUrls ?? [],
       hashtags: hashtags ?? [],
+      mentions: mentions ?? [],
       retryCount: 0,
     });
   }

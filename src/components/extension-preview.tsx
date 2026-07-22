@@ -12,7 +12,7 @@ const DEMO_URL = "https://youtube.com/watch?v=demo";
 function downloadExtension() {
   const a = document.createElement("a");
   a.href = EXTENSION_ZIP_URL;
-  a.download = "socialpilot-chrome-extension.zip";
+  a.download = "smtools-chrome-extension.zip";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -42,7 +42,7 @@ export function ExtensionPreview() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-semibold text-lg text-slate-900 dark:text-white">SocialPilot</span>
+              <span className="font-semibold text-lg text-slate-900 dark:text-white">SMTools</span>
               <VisitorCounter />
             </div>
             <div className="flex items-center gap-4">
@@ -163,7 +163,7 @@ export function ExtensionPreview() {
                   </div>
                   <div className="flex-1 flex justify-center">
                     <div className="w-48 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center px-3">
-                      <span className="text-xs text-slate-500 dark:text-slate-400">chrome-extension://socialpilot/popup.html</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">chrome-extension://smtools/popup.html</span>
                     </div>
                   </div>
                 </div>
@@ -178,7 +178,7 @@ export function ExtensionPreview() {
                         </svg>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white">SocialPilot</h3>
+                        <h3 className="font-semibold text-slate-900 dark:text-white">SMTools</h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400">Schedule posts to 5 platforms</p>
                       </div>
                     </div>
@@ -313,7 +313,7 @@ export function ExtensionPreview() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto text-center">
           <div className="relative rounded-3xl bg-gradient-to-r from-amber-500 to-pink-500 p-10 sm:p-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
@@ -349,7 +349,7 @@ export function ExtensionPreview() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <span className="font-semibold text-lg">SocialPilot</span>
+                <span className="font-semibold text-lg">SMTools</span>
               </div>
               <p className="text-slate-400 text-sm">The fastest way to schedule &amp; publish to 5 platforms.</p>
             </div>
@@ -359,7 +359,7 @@ export function ExtensionPreview() {
                 <li><a href="#features" onClick={(e) => { e.preventDefault(); scrollToSection("features"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Features</a></li>
                 <li><a href="#platforms" onClick={(e) => { e.preventDefault(); scrollToSection("platforms"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Platforms</a></li>
                 <li><a href="#pricing" onClick={(e) => { e.preventDefault(); scrollToSection("pricing"); }} className="hover:text-amber-400 transition-colors cursor-pointer">Pricing</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://docs.socialpilot.io"); }} className="hover:text-amber-400 transition-colors cursor-pointer">API Docs</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); openExternalLink("https://docs.smtools.io"); }} className="hover:text-amber-400 transition-colors cursor-pointer">API Docs</a></li>
               </ul>
             </div>
             <div>
@@ -381,7 +381,7 @@ export function ExtensionPreview() {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-            © 2024 SocialPilot. All rights reserved.
+            © 2024 SMTools. All rights reserved.
           </div>
         </div>
       </footer>

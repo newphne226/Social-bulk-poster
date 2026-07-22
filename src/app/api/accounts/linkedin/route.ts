@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/app/api/auth/register/route";
+import { verifyToken } from "@/lib/tokens";
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || "";
 const REDIRECT_URI = process.env.NEXT_PUBLIC_SITE_URL

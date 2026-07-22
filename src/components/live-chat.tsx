@@ -18,7 +18,7 @@ export function LiveChat() {
     setTimeout(() => {
       setMessages((prev) => [
         ...prev,
-        { id: Date.now(), from: "bot", text: "Thanks for reaching out! We'll get back to you shortly. You can also email us at support@socialpilot.io" },
+        { id: Date.now(), from: "bot", text: "Thanks for reaching out! We'll get back to you shortly. You can also email us at support@smtools.online" },
       ]);
     }, 1000);
   };
@@ -35,7 +35,7 @@ export function LiveChat() {
                 <MessageCircle className="h-4 w-4 text-white" />
               </div>
               <div>
-                <h3 className="text-white font-semibold text-sm">SocialPilot Support</h3>
+                <h3 className="text-white font-semibold text-sm">SMTools Support</h3>
                 <p className="text-white/80 text-xs">We typically reply in a few minutes</p>
               </div>
             </div>

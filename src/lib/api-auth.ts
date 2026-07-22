@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyToken } from "@/app/api/auth/register/route";
+import { verifyToken } from "@/lib/tokens";
 
 export type PlanTier = "FREE" | "BASIC" | "SILVER" | "PRO";
 

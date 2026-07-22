@@ -31,11 +31,13 @@ export async function GET(request: NextRequest) {
       take: limit,
       include: {
         _count: { select: { posts: true, accounts: true } },
-        cryptoPayments: { where: { status: "CONFIRMED" }, orderBy: { createdAt: "desc" }, take: 1 },
+        subscription: { include: { plan: { select: { name: true, tier: true } } } },
       },
     }),
     db.user.count({ where }),
   ]);
+
+  const planNameMap: Record<string, string> = { "Free": "FREE", "Basic": "BASIC", "Silver": "SILVER", "Pro": "PRO" };
 
   return NextResponse.json({
     users: users.map((u) => ({
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
       role: u.role,
       status: u.status,
       approvalStatus: u.approvalStatus,
-      plan: u.cryptoPayments?.[0]?.plan || "FREE",
+      plan: planNameMap[u.subscription?.plan?.name] || "FREE",
       postsCount: u._count.posts,
       accountsCount: u._count.accounts,
       createdAt: u.createdAt.toISOString(),
@@ -108,21 +110,57 @@ export async function PATCH(request: NextRequest) {
       break;
     case "setPlan": {
       const allowedPlans = ["FREE", "BASIC", "SILVER", "PRO"];
-      const plan = allowedPlans.includes(value) ? value : "FREE";
+      const planName = allowedPlans.includes(value) ? value : "FREE";
+
+      // Map UI plan names to database plan names
+      const planDbNameMap: Record<string, string> = { FREE: "Free", BASIC: "Basic", SILVER: "Silver", PRO: "Pro" };
+      const planDbName = planDbNameMap[planName] || "Free";
+
+      // Find the actual Plan record by name
+      const planRecord = await db.plan.findFirst({ where: { name: planDbName } });
+      if (!planRecord) {
+        return NextResponse.json({ error: `Plan "${planDbName}" not found in database` }, { status: 404 });
+      }
+
       // Find or create subscription
       const existingSub = await db.subscription.findUnique({ where: { userId } });
+
       if (existingSub) {
+        const isActive = planName !== "FREE";
+        const now = new Date();
+        const periodEnd = new Date(now);
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+
         await db.subscription.update({
           where: { id: existingSub.id },
-          data: { status: plan === "FREE" ? "CANCELED" : "ACTIVE" },
+          data: {
+            planId: planRecord.id,
+            status: isActive ? "ACTIVE" : "CANCELED",
+            billingCycle: "MONTHLY",
+            currentPeriodStart: isActive ? now : existingSub.currentPeriodStart,
+            currentPeriodEnd: isActive ? periodEnd : existingSub.currentPeriodEnd,
+            trialEndsAt: planName === "FREE" ? null : existingSub.trialEndsAt,
+            canceledAt: planName === "FREE" ? new Date() : null,
+          },
         });
-      } else if (plan !== "FREE") {
-        // Create a basic subscription record
+      } else if (planName !== "FREE") {
+        const now = new Date();
+        const periodEnd = new Date(now);
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+
         await db.subscription.create({
-          data: { userId, planId: plan, status: "ACTIVE", billingCycle: "MONTHLY" },
-        }).catch(() => {}); // Ignore if planId doesn't exist
+          data: {
+            userId,
+            planId: planRecord.id,
+            status: "ACTIVE",
+            billingCycle: "MONTHLY",
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+          },
+        });
       }
-      return NextResponse.json({ user: { id: userId, plan } });
+
+      return NextResponse.json({ user: { id: userId, plan: planName } });
     }
     case "delete":
       updateData = { status: "DELETED", deletedAt: new Date() };

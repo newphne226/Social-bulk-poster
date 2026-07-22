@@ -1,5 +1,5 @@
 // =====================================================================
-// SocialPilot Chrome Extension — Popup logic (v3 — in-extension signup)
+// SMTools Chrome Extension — Popup logic (v3 — in-extension signup)
 // =====================================================================
 // v3 changes from v2:
 //   • Sign Up form is now a FULL registration form (name, email, password,
@@ -42,7 +42,7 @@ let currentSection = "dashboard";
 document.addEventListener("DOMContentLoaded", async () => {
   // Load the API base URL from storage (options page may override it)
   API_BASE = await getApiBase();
-  console.log("[SocialPilot] API base:", API_BASE);
+  console.log("[SMTools] API base:", API_BASE);
 
   applyDarkMode(await getDarkMode());
 
@@ -85,6 +85,10 @@ function bindAuthEvents() {
   // Google OAuth button
   const googleBtn = document.getElementById("google-btn");
   if (googleBtn) googleBtn.addEventListener("click", handleGoogleLogin);
+
+  // Facebook OAuth button
+  const facebookBtn = document.getElementById("facebook-btn");
+  if (facebookBtn) facebookBtn.addEventListener("click", handleFacebookLogin);
 
   // Tab switcher (Sign In ↔ Sign Up)
   document.querySelectorAll(".auth-tab").forEach((tab) => {
@@ -335,6 +339,14 @@ async function handleGoogleLogin() {
   showToast("Complete Google sign-in in the new tab", "info");
 }
 
+async function handleFacebookLogin() {
+  const webOrigin = API_BASE.replace(/\/api\/?$/, "");
+  await chrome.tabs.create({
+    url: `${webOrigin}/api/auth/facebook?source=extension`,
+  });
+  showToast("Complete Facebook sign-in in the new tab", "info");
+}
+
 // ---------------------------------------------------------------------
 // Sign Up handler — creates a real user in the database via /api/auth/register
 // ---------------------------------------------------------------------
@@ -407,7 +419,7 @@ async function handleSignup(e) {
 }
 
 async function handleLogout() {
-  if (!confirm("Log out of SocialPilot?")) return;
+  if (!confirm("Log out of SMTools?")) return;
   await sendMessage({ type: "AUTH_LOGOUT" });
   showLogin();
   showToast("Signed out", "info");
@@ -454,7 +466,7 @@ function sendMessage(message, timeoutMs = 15000) {
 async function loadState() {
   const data = await sendMessage({ type: "GET_STATE" });
   if (data?.ok === false) {
-    console.warn("[SocialPilot] GET_STATE failed:", data.error);
+    console.warn("[SMTools] GET_STATE failed:", data.error);
     // If unauthorized, log out
     if (data.error?.includes("Unauthorized")) {
       handleLogout();
@@ -508,10 +520,9 @@ function renderSection(section) {
 
   const renderers = {
     dashboard: renderDashboard,
-    quick: renderQuick,
+    accounts: renderAccounts,
+    posts: renderPosts,
     create: renderCreate,
-    drafts: renderDrafts,
-    media: renderMedia,
     queue: renderQueue,
     notifications: renderNotifications,
     settings: renderSettings,
@@ -557,76 +568,183 @@ function renderDashboard() {
   `;
 }
 
-function renderQuick() {
-  if (!state.accounts.length) {
-    return emptyState("Connect a social account first");
-  }
+function renderAccounts() {
+  const webOrigin = API_BASE.replace(/\/api\/?$/, "");
   return `
-    <div class="section-title">Quick Schedule</div>
-    <div class="card">
-      <label for="quick-caption">Caption</label>
-      <textarea id="quick-caption" placeholder="What's on your mind?"></textarea>
-      <label for="quick-account">Account</label>
-      <select id="quick-account">
-        ${state.accounts.map((a) => `<option value="${a.id}">${escapeHtml(PLATFORMS[a.platform]?.name || a.platform)} · ${escapeHtml(a.displayName)}</option>`).join("")}
-      </select>
-      <label for="quick-time">Schedule for</label>
-      <input type="datetime-local" id="quick-time" />
-      <div class="btn-row">
-        <button class="btn-secondary" id="quick-schedule-btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; border: none;">Schedule</button>
+    <div class="section-title">Connected Accounts (${state.accounts.length})</div>
+    ${state.accounts.length === 0 ? emptyState("No accounts connected") : state.accounts.map((a) => {
+      const plat = PLATFORMS[a.platform] || { name: a.platform, color: "#888", icon: "?" };
+      return `
+        <div class="post-item" style="align-items: center;">
+          <div class="post-icon" style="background: ${plat.color}">${plat.icon}</div>
+          <div class="post-content" style="flex: 1;">
+            <div class="post-meta">${escapeHtml(a.displayName || a.username || a.platform)}</div>
+            <div class="post-caption" style="font-size: 11px; color: var(--text-muted);">
+              ${plat.name} · ${a.followerCount ? formatNum(a.followerCount) + " followers" : "Connected"}
+            </div>
+          </div>
+          <button class="btn-icon-danger" data-disconnect="${a.id}" title="Disconnect">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      `;
+    }).join("")}
+    <div class="card" style="margin-top: 8px;">
+      <div class="section-title" style="margin-bottom: 8px;">Connect New Account</div>
+      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <button class="btn-connect" data-connect="facebook" style="background: #1877F2; color: white;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          Facebook
+        </button>
+        <button class="btn-connect" data-connect="linkedin" style="background: #0A66C2; color: white;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          LinkedIn
+        </button>
       </div>
     </div>
   `;
 }
+
+function renderPosts() {
+  const statusTabs = ["ALL", "SCHEDULED", "PUBLISHED", "DRAFT", "FAILED"];
+  const activeFilter = state._postsFilter || "ALL";
+  const filtered = state.posts.filter((p) => {
+    if (activeFilter !== "ALL" && p.status !== activeFilter) return false;
+    return true;
+  });
+
+  return `
+    <div class="section-title">My Posts (${state.posts.length})</div>
+    <div class="status-tabs">
+      ${statusTabs.map((s) => `<button class="status-tab ${activeFilter === s ? "active" : ""}" data-filter="${s}">${s}</button>`).join("")}
+    </div>
+    ${filtered.length === 0 ? emptyState("No posts found") : filtered.slice(0, 30).map((p) => {
+      const plat = PLATFORMS[p.platform] || { color: "#888", icon: "?" };
+      return `
+        <div class="post-item">
+          <div class="post-icon" style="background: ${plat.color}">${plat.icon}</div>
+          <div class="post-content">
+            <div class="post-meta">${escapeHtml(p.accountUsername || "")} <span class="status-badge status-${p.status}">${p.status}</span></div>
+            <div class="post-caption">${escapeHtml(p.caption || "No caption")}</div>
+            ${p.type && p.type !== "TEXT" ? `<span class="type-badge">${p.type}</span>` : ""}
+            ${p.scheduledAt ? `<div class="post-time">⏰ ${new Date(p.scheduledAt).toLocaleString()}</div>` : ""}
+          </div>
+          <div class="post-actions">
+            <button class="btn-icon" data-edit-post="${p.id}" title="Edit">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn-icon-danger" data-delete-post="${p.id}" title="Delete">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("")}
+  `;
+}
+
+const PLATFORM_POST_TYPES = {
+  facebook: [
+    { value: "TEXT", label: "Text" },
+    { value: "IMAGE", label: "Photo" },
+    { value: "VIDEO", label: "Video" },
+    { value: "REEL", label: "Reels" },
+    { value: "LINK", label: "Content/Link" },
+    { value: "CAROUSEL", label: "Carousel" },
+  ],
+  instagram: [
+    { value: "IMAGE", label: "Photo" },
+    { value: "REEL", label: "Reels" },
+    { value: "VIDEO", label: "Video" },
+    { value: "CAROUSEL", label: "Carousel" },
+    { value: "STORY", label: "Story" },
+  ],
+  x: [
+    { value: "TEXT", label: "Text" },
+    { value: "IMAGE", label: "Photo" },
+    { value: "VIDEO", label: "Video" },
+    { value: "LINK", label: "Link" },
+  ],
+  linkedin: [
+    { value: "TEXT", label: "Text" },
+    { value: "IMAGE", label: "Photo" },
+    { value: "VIDEO", label: "Video" },
+    { value: "LINK", label: "Article/Link" },
+    { value: "CAROUSEL", label: "Carousel" },
+  ],
+  pinterest: [
+    { value: "IMAGE", label: "Pin" },
+    { value: "VIDEO", label: "Video Pin" },
+    { value: "CAROUSEL", label: "Idea Pin" },
+  ],
+};
+
+let _createState = { platform: "facebook", postType: "TEXT", accountId: "", linkUrl: "", hashtags: [], mentions: [], mediaUrls: [] };
 
 function renderCreate() {
   if (!state.accounts.length) {
     return emptyState("Connect a social account first");
   }
+  const cs = _createState;
+  const platAccounts = state.accounts.filter((a) => a.platform === cs.platform);
+  const postTypes = PLATFORM_POST_TYPES[cs.platform] || PLATFORM_POST_TYPES.facebook;
+
   return `
     <div class="section-title">Create Post</div>
     <div class="card">
-      <label for="create-caption">Caption</label>
-      <textarea id="create-caption" placeholder="Write your post..."></textarea>
-      <label>Media</label>
-      <div style="border: 2px dashed var(--border); padding: 16px; text-align: center; border-radius: 8px; color: var(--text-muted); font-size: 11px; cursor: pointer;" id="create-drop">
-        Click or drop files here
-      </div>
-      <label>Post to</label>
-      <div class="platform-chips" id="create-platforms">
-        ${state.accounts.map((a) => `
-          <div class="platform-chip" data-account="${a.id}">
-            <span class="pdot" style="background: ${PLATFORMS[a.platform]?.color || '#888'}"></span>
-            ${escapeHtml(a.displayName)}
-          </div>
+      <label>Platform</label>
+      <div class="platform-selector">
+        ${Object.entries(PLATFORMS).map(([k, v]) => `
+          <button class="plat-btn ${cs.platform === k ? "active" : ""}" data-set-platform="${k}" style="${cs.platform === k ? `background: ${v.color}; color: white; border-color: ${v.color};` : ""}">${v.icon} ${v.name}</button>
         `).join("")}
       </div>
-      <label for="create-hashtags">Hashtags</label>
+
+      <label>Post Type</label>
+      <div class="type-selector">
+        ${postTypes.map((pt) => `
+          <button class="type-btn ${cs.postType === pt.value ? "active" : ""}" data-set-type="${pt.value}">${pt.label}</button>
+        `).join("")}
+      </div>
+
+      <label>Account</label>
+      <select id="create-account">
+        <option value="">Select account...</option>
+        ${platAccounts.map((a) => `<option value="${a.id}" ${cs.accountId === a.id ? "selected" : ""}>${escapeHtml(a.displayName || a.username || a.platform)}</option>`).join("")}
+      </select>
+      ${platAccounts.length === 0 ? `<div style="font-size: 11px; color: #f59e0b; margin-top: 4px;">No ${PLATFORMS[cs.platform]?.name} accounts. <a href="#" data-open-section="accounts" style="color: #f59e0b;">Connect one</a></div>` : ""}
+
+      <label>Link / URL (optional)</label>
+      <input type="url" id="create-link" placeholder="https://example.com/image.jpg" value="${escapeHtml(cs.linkUrl)}" />
+
+      <label>Caption</label>
+      <textarea id="create-caption" placeholder="What's on your mind?"></textarea>
+
+      ${(cs.postType === "IMAGE" || cs.postType === "VIDEO" || cs.postType === "CAROUSEL" || cs.postType === "REEL" || cs.postType === "STORY") ? `
+        <label>Media URLs</label>
+        <div style="display: flex; gap: 4px;">
+          <input type="url" id="create-media-url" placeholder="https://example.com/image.jpg" style="flex: 1;" />
+          <button class="btn-secondary" id="add-media-btn" style="padding: 6px 10px;">Add</button>
+        </div>
+        <div class="tag-list" id="media-tags">
+          ${cs.mediaUrls.map((u, i) => `<span class="tag tag-blue">${escapeHtml(u.substring(0, 30))}... <button data-remove-media="${i}">×</button></span>`).join("")}
+        </div>
+      ` : ""}
+
+      <label>Hashtags</label>
       <input type="text" id="create-hashtags" placeholder="#socialmedia #marketing" />
-      <div class="btn-row">
+
+      <label>Mentions</label>
+      <input type="text" id="create-mentions" placeholder="@username" />
+
+      <label>Schedule (optional)</label>
+      <input type="datetime-local" id="create-schedule-time" />
+      <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">Optional — for scheduled posts</div>
+
+      <div class="btn-row" style="gap: 6px;">
         <button class="btn-secondary" id="create-draft-btn">Save Draft</button>
-        <button class="btn-secondary" id="create-schedule-btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; border: none;">Schedule</button>
+        <button class="btn-primary" id="create-instant-btn" style="background: linear-gradient(135deg, #22c55e, #059669); color: white; border: none;">Post Now</button>
+        <button class="btn-primary" id="create-schedule-btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; border: none;">Schedule</button>
       </div>
-    </div>
-  `;
-}
-
-function renderDrafts() {
-  const drafts = state.posts.filter((p) => p.status === "DRAFT");
-  return `
-    <div class="section-title">Drafts (${drafts.length})</div>
-    ${drafts.map(renderPostItem).join("") || emptyState("No drafts yet")}
-  `;
-}
-
-function renderMedia() {
-  return `
-    <div class="section-title">Media Library</div>
-    <div class="card">
-      <div class="media-grid">
-        ${[1, 2, 3, 4, 5, 6].map((i) => `<img src="https://picsum.photos/seed/ext${i}/100/100" alt="" />`).join("")}
-      </div>
-      <button class="btn-secondary" style="margin-top: 8px; width: 100%;">Upload more</button>
     </div>
   `;
 }
@@ -725,17 +843,93 @@ function attachSectionHandlers() {
     b.addEventListener("click", () => renderSection(b.dataset.action));
   });
 
-  // Quick schedule
-  const qsBtn = document.getElementById("quick-schedule-btn");
-  if (qsBtn) qsBtn.addEventListener("click", handleQuickSchedule);
+  // Create post - platform selector
+  document.querySelectorAll("[data-set-platform]").forEach((b) => {
+    b.addEventListener("click", () => {
+      _createState.platform = b.dataset.setPlatform;
+      const types = PLATFORM_POST_TYPES[_createState.platform] || PLATFORM_POST_TYPES.facebook;
+      if (!types.find((t) => t.value === _createState.postType)) {
+        _createState.postType = types[0]?.value || "TEXT";
+      }
+      _createState.accountId = "";
+      renderSection("create");
+    });
+  });
 
-  // Create post
+  // Create post - type selector
+  document.querySelectorAll("[data-set-type]").forEach((b) => {
+    b.addEventListener("click", () => {
+      _createState.postType = b.dataset.setType;
+      renderSection("create");
+    });
+  });
+
+  // Create post - link URL auto-detect
+  const linkInput = document.getElementById("create-link");
+  if (linkInput) linkInput.addEventListener("input", (e) => {
+    _createState.linkUrl = e.target.value;
+  });
+
+  // Create post - add media
+  const addMediaBtn = document.getElementById("add-media-btn");
+  if (addMediaBtn) addMediaBtn.addEventListener("click", () => {
+    const input = document.getElementById("create-media-url");
+    if (input?.value?.trim()) {
+      _createState.mediaUrls.push(input.value.trim());
+      renderSection("create");
+    }
+  });
+
+  // Create post - remove media
+  document.querySelectorAll("[data-remove-media]").forEach((b) => {
+    b.addEventListener("click", () => {
+      _createState.mediaUrls.splice(parseInt(b.dataset.removeMedia), 1);
+      renderSection("create");
+    });
+  });
+
+  // Create post - open section links
+  document.querySelectorAll("[data-open-section]").forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      renderSection(b.dataset.openSection);
+    });
+  });
+
+  // Create post - schedule
   const csBtn = document.getElementById("create-schedule-btn");
-  if (csBtn) csBtn.addEventListener("click", () => handleCreatePost(false));
+  if (csBtn) csBtn.addEventListener("click", () => handleCreatePost("schedule"));
   const cdBtn = document.getElementById("create-draft-btn");
-  if (cdBtn) cdBtn.addEventListener("click", () => handleCreatePost(true));
-  document.querySelectorAll("#create-platforms .platform-chip").forEach((c) => {
-    c.addEventListener("click", () => c.classList.toggle("selected"));
+  if (cdBtn) cdBtn.addEventListener("click", () => handleCreatePost("draft"));
+  const ciBtn = document.getElementById("create-instant-btn");
+  if (ciBtn) ciBtn.addEventListener("click", () => handleCreatePost("instant"));
+
+  // Posts - filter tabs
+  document.querySelectorAll(".status-tab").forEach((b) => {
+    b.addEventListener("click", () => {
+      state._postsFilter = b.dataset.filter;
+      renderSection("posts");
+    });
+  });
+
+  // Posts - edit
+  document.querySelectorAll("[data-edit-post]").forEach((b) => {
+    b.addEventListener("click", () => handleEditPost(b.dataset.editPost));
+  });
+
+  // Posts - delete
+  document.querySelectorAll("[data-delete-post]").forEach((b) => {
+    b.addEventListener("click", () => handleDeletePost(b.dataset.deletePost));
+  });
+
+  // Accounts - disconnect
+  document.querySelectorAll("[data-disconnect]").forEach((b) => {
+    b.addEventListener("click", () => handleDisconnectAccount(b.dataset.disconnect));
+  });
+
+  // Accounts - connect
+  document.querySelectorAll("[data-connect]").forEach((b) => {
+    b.addEventListener("click", () => handleConnectAccount(b.dataset.connect));
   });
 
   // Settings
@@ -756,64 +950,118 @@ function attachSectionHandlers() {
   if (lo) lo.addEventListener("click", handleLogout);
 }
 
-async function handleQuickSchedule() {
-  const caption = document.getElementById("quick-caption").value.trim();
-  const accountId = document.getElementById("quick-account").value;
-  const time = document.getElementById("quick-time").value;
-  if (!caption) return showToast("Caption required", "error");
-  if (!accountId) return showToast("Select an account", "error");
-  if (!time) return showToast("Schedule time required", "error");
+async function handleCreatePost(mode = "draft") {
+  const caption = document.getElementById("create-caption")?.value?.trim() || "";
+  const hashtagsRaw = document.getElementById("create-hashtags")?.value?.trim() || "";
+  const mentionsRaw = document.getElementById("create-mentions")?.value?.trim() || "";
+  const scheduleTime = document.getElementById("create-schedule-time")?.value || "";
+  const accountId = document.getElementById("create-account")?.value || _createState.accountId;
 
-  const scheduledAt = new Date(time).toISOString();
-  if (new Date(scheduledAt) <= new Date()) {
-    return showToast("Schedule time must be in the future", "error");
-  }
+  if (!caption && _createState.mediaUrls.length === 0) return showToast("Caption or media required", "error");
+  if (mode !== "draft" && !accountId) return showToast("Select an account", "error");
+
+  const hashtags = hashtagsRaw.split(/\s+/).filter(Boolean).map((h) => h.replace(/^#/, ""));
+  const mentions = mentionsRaw.split(/\s+/).filter(Boolean).map((m) => m.replace(/^@/, ""));
+
+  const now = new Date().toISOString();
+  let status;
+  if (mode === "instant") status = "PUBLISHED";
+  else if (mode === "schedule" && scheduleTime) status = "SCHEDULED";
+  else status = "DRAFT";
 
   showLoading(true);
   try {
-    const res = await sendMessage({
-      type: "SCHEDULE_POST",
-      payload: { caption, accountId, scheduledAt },
-    });
+    const payload = {
+      caption,
+      platform: _createState.platform,
+      type: _createState.postType,
+      accountId: accountId || undefined,
+      mediaUrls: _createState.mediaUrls,
+      hashtags,
+      mentions,
+      status,
+    };
+    if (mode === "instant") {
+      payload.scheduledAt = now;
+      payload.publishedAt = now;
+    } else if (scheduleTime) {
+      payload.scheduledAt = new Date(scheduleTime).toISOString();
+    }
+
+    const res = await sendMessage({ type: "CREATE_POST", payload });
     if (res?.ok === false) throw new Error(res.error);
-    showToast("Post scheduled!", "success");
+    showToast(mode === "instant" ? "Posted instantly!" : mode === "schedule" ? "Post scheduled!" : "Draft saved!", "success");
+    _createState = { platform: "facebook", postType: "TEXT", accountId: "", linkUrl: "", hashtags: [], mentions: [], mediaUrls: [] };
     await loadState();
-    renderSection("dashboard");
-  } catch (e) {
-    showToast("Failed to schedule: " + (e.message || e), "error");
-  } finally {
-    showLoading(false);
-  }
-}
-
-async function handleCreatePost(asDraft = false) {
-  const caption = document.getElementById("create-caption").value.trim();
-  const hashtags = document.getElementById("create-hashtags").value.trim();
-  const selected = Array.from(document.querySelectorAll("#create-platforms .platform-chip.selected"))
-    .map((c) => c.dataset.account);
-  if (!caption) return showToast("Caption required", "error");
-  if (selected.length === 0 && !asDraft) return showToast("Select at least one account", "error");
-
-  showLoading(true);
-  try {
-    const type = asDraft ? "CREATE_POST" : "SCHEDULE_POST";
-    const res = await sendMessage({
-      type,
-      payload: {
-        caption,
-        hashtags: hashtags.split(/\s+/).filter(Boolean),
-        accountIds: selected,
-        status: asDraft ? "DRAFT" : "SCHEDULED",
-      },
-    });
-    if (res?.ok === false) throw new Error(res.error);
-    showToast(asDraft ? "Draft saved" : "Post scheduled!", "success");
-    renderSection("dashboard");
+    renderSection("posts");
   } catch (e) {
     showToast("Failed: " + (e.message || e), "error");
   } finally {
     showLoading(false);
   }
+}
+
+async function handleEditPost(postId) {
+  const post = state.posts.find((p) => p.id === postId);
+  if (!post) return;
+  const newCaption = prompt("Edit caption:", post.caption || "");
+  if (newCaption === null) return;
+  showLoading(true);
+  try {
+    const res = await sendMessage({ type: "UPDATE_POST", postId, payload: { caption: newCaption } });
+    if (res?.ok === false) throw new Error(res.error);
+    showToast("Post updated!", "success");
+    await loadState();
+    renderSection("posts");
+  } catch (e) {
+    showToast("Failed: " + (e.message || e), "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function handleDeletePost(postId) {
+  if (!confirm("Delete this post?")) return;
+  showLoading(true);
+  try {
+    const res = await sendMessage({ type: "DELETE_POST", postId });
+    if (res?.ok === false) throw new Error(res.error);
+    showToast("Post deleted", "success");
+    await loadState();
+    renderSection("posts");
+  } catch (e) {
+    showToast("Failed: " + (e.message || e), "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function handleDisconnectAccount(accountId) {
+  if (!confirm("Disconnect this account?")) return;
+  showLoading(true);
+  try {
+    const res = await sendMessage({ type: "DELETE_ACCOUNT", accountId });
+    if (res?.ok === false) throw new Error(res.error);
+    showToast("Account disconnected", "success");
+    await loadState();
+    renderSection("accounts");
+  } catch (e) {
+    showToast("Failed: " + (e.message || e), "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function handleConnectAccount(platform) {
+  const { token } = await chrome.storage.local.get("token");
+  if (!token) {
+    showToast("Please sign in first", "error");
+    return;
+  }
+  const webOrigin = API_BASE.replace(/\/api\/?$/, "");
+  const url = `${webOrigin}/api/accounts/${platform}?token=${encodeURIComponent(token)}`;
+  chrome.tabs.create({ url });
+  showToast(`Opening ${PLATFORMS[platform]?.name || platform} connect...`, "info");
 }
 
 async function handleDarkToggle() {

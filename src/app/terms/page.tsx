@@ -17,7 +17,7 @@ export default function TermsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-semibold text-lg text-slate-900 dark:text-white">SocialPilot</span>
+              <span className="font-semibold text-lg text-slate-900 dark:text-white">SMTools</span>
             </a>
             <a href="/" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
               &larr; Back to Home
@@ -54,7 +54,7 @@ export default function TermsPage() {
               </h2>
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
                 <p className="text-slate-600 dark:text-slate-400 mb-4">
-                  By accessing or using SocialPilot (the &quot;Service&quot;), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.
+                  By accessing or using SMTools (the &quot;Service&quot;), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.
                 </p>
                 <ul className="space-y-2 text-slate-600 dark:text-slate-400">
                   <li className="flex items-start gap-2"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" /> You must be at least 13 years old (16 in EU) to use the Service.</li>
@@ -73,7 +73,7 @@ export default function TermsPage() {
                 Description of Service
               </h2>
               <p className="text-slate-600 dark:text-slate-400 mb-4">
-                SocialPilot is a Chrome extension that enables users to schedule and publish social media posts across multiple platforms including Facebook, Instagram, X (Twitter), LinkedIn, and Pinterest. Key features include:
+                SMTools is a Chrome extension that enables users to schedule and publish social media posts across multiple platforms including Facebook, Instagram, X (Twitter), LinkedIn, and Pinterest. Key features include:
               </p>
               <ul className="space-y-2 text-slate-600 dark:text-slate-400">
                 <li className="flex items-start gap-2"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" /> Multi-platform post scheduling and publishing</li>
@@ -109,7 +109,7 @@ export default function TermsPage() {
                 User Content
               </h2>
               <p className="text-slate-600 dark:text-slate-400 mb-4">
-                You retain ownership of all content you create and publish through SocialPilot. By using the Service, you grant us a limited license to process and transmit your content solely for the purpose of publishing it to your connected social media platforms.
+                You retain ownership of all content you create and publish through SMTools. By using the Service, you grant us a limited license to process and transmit your content solely for the purpose of publishing it to your connected social media platforms.
               </p>
               <ul className="space-y-2 text-slate-600 dark:text-slate-400">
                 <li className="flex items-start gap-2"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" /> You are solely responsible for your content.</li>
@@ -167,7 +167,7 @@ export default function TermsPage() {
                 Third-Party Services
               </h2>
               <p className="text-slate-600 dark:text-slate-400 mb-4">
-                SocialPilot integrates with third-party social media platforms. Your use of these platforms is governed by their respective terms of service.
+                SMTools integrates with third-party social media platforms. Your use of these platforms is governed by their respective terms of service.
               </p>
               <ul className="space-y-2 text-slate-600 dark:text-slate-400">
                 <li className="flex items-start gap-2"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" /> We are not responsible for the availability or practices of third-party services.</li>
@@ -185,7 +185,7 @@ export default function TermsPage() {
                 Intellectual Property
               </h2>
               <p className="text-slate-600 dark:text-slate-400 mb-4">
-                The Service, including its design, code, features, trademarks, and branding, is owned by SocialPilot and protected by international intellectual property laws.
+                The Service, including its design, code, features, trademarks, and branding, is owned by SMTools and protected by international intellectual property laws.
               </p>
               <ul className="space-y-2 text-slate-600 dark:text-slate-400">
                 <li className="flex items-start gap-2"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" /> You may not copy, modify, or distribute any part of the Service.</li>
@@ -255,7 +255,7 @@ export default function TermsPage() {
                 <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5" /> These Terms are governed by the laws of the State of Delaware, USA.</li>
                 <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-amber-500" /> Disputes resolved through binding arbitration in San Francisco, CA.</li>
                 <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-amber-500" /> Class actions and jury trials waived to the maximum extent permitted by law.</li>
-                <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-amber-500" /> EU users: GDPR rights apply. Contact our DPO at dpo@socialpilot.io.</li>
+                <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-amber-500" /> EU users: GDPR rights apply. Contact our DPO at dpo@smtools.online.</li>
               </ul>
             </section>
 
@@ -286,7 +286,7 @@ export default function TermsPage() {
                 </p>
                 <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
                   <Mail className="h-5 w-5 text-amber-500" />
-                  <a href="mailto:legal@socialpilot.io" className="text-amber-600 dark:text-amber-400 hover:underline">legal@socialpilot.io</a>
+                  <a href="mailto:legal@smtools.online" className="text-amber-600 dark:text-amber-400 hover:underline">legal@smtools.online</a>
                 </div>
               </div>
             </section>
@@ -303,11 +303,11 @@ export default function TermsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             </div>
-            <span className="font-semibold text-lg">SocialPilot</span>
+            <span className="font-semibold text-lg">SMTools</span>
           </div>
           <p className="text-slate-400 text-sm mb-4">The fastest way to schedule &amp; publish to 5 platforms.</p>
           <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-            &copy; 2024 SocialPilot. All rights reserved.
+            &copy; 2024 SMTools. All rights reserved.
           </div>
         </div>
       </footer>

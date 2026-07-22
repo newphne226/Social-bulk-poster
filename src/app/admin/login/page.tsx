@@ -21,7 +21,7 @@ export default function AdminLoginPage() {
       // First, ensure DB is seeded
       setSeeding(true);
       try {
-        await fetch("/api/admin/seed", { method: "POST" });
+        await fetch("/api/admin/seed", { method: "POST", signal: AbortSignal.timeout(5000) });
       } catch {
         // seed failed, but try login anyway
       }
@@ -33,7 +33,8 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
 
       if (!res.ok) {
         setError(data.error || "Login failed.");
@@ -107,7 +108,7 @@ export default function AdminLoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full px-4 py-3 rounded-xl border border-slate-600 bg-slate-900 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                placeholder="admin@test.com"
+                placeholder="sreja174@gmail.com"
               />
             </div>
 

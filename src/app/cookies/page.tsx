@@ -18,7 +18,7 @@ export default function CookiesPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2-2v14a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-semibold text-lg text-slate-900 dark:text-white">SocialPilot</span>
+              <span className="font-semibold text-lg text-slate-900 dark:text-white">SMTools</span>
             </a>
             <a href="/" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
               ← Back to Home
@@ -50,7 +50,7 @@ export default function CookiesPage() {
               </p>
               <p className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                <span>Questions? privacy@socialpilot.io</span>
+                <span>Questions? privacy@smtools.online</span>
               </p>
             </div>
           </header>
@@ -298,7 +298,7 @@ export default function CookiesPage() {
                 ))}
               </ul>
               <p className="mt-6 text-slate-600 dark:text-slate-400">
-                To exercise your rights, email <a href="mailto:privacy@socialpilot.io" className="text-amber-600 dark:text-amber-400 hover:underline">privacy@socialpilot.io</a>. We'll respond within 30 days.
+                To exercise your rights, email <a href="mailto:privacy@smtools.online" className="text-amber-600 dark:text-amber-400 hover:underline">privacy@smtools.online</a>. We'll respond within 30 days.
               </p>
             </section>
 
@@ -315,9 +315,9 @@ export default function CookiesPage() {
                   Questions about this Cookie Policy or your data? Contact our privacy team:
                 </p>
                 <ul className="space-y-4 text-slate-600 dark:text-slate-400">
-                  <li className="flex items-center gap-3"><Mail className="h-5 w-5 text-amber-500" /> Email: <a href="mailto:privacy@socialpilot.io" className="text-amber-600 dark:text-amber-400 hover:underline">privacy@socialpilot.io</a></li>
-                  <li className="flex items-center gap-3"><Mail className="h-5 w-5 text-amber-500" /> Data Protection Officer: <a href="mailto:dpo@socialpilot.io" className="text-amber-600 dark:text-amber-400 hover:underline">dpo@socialpilot.io</a></li>
-                  <li className="flex items-center gap-3"><Mail className="h-5 w-5 text-amber-500" /> Mail: SocialPilot Inc., 548 Market St #98765, San Francisco, CA 94104</li>
+                  <li className="flex items-center gap-3"><Mail className="h-5 w-5 text-amber-500" /> Email: <a href="mailto:privacy@smtools.online" className="text-amber-600 dark:text-amber-400 hover:underline">privacy@smtools.online</a></li>
+                  <li className="flex items-center gap-3"><Mail className="h-5 w-5 text-amber-500" /> Data Protection Officer: <a href="mailto:dpo@smtools.online" className="text-amber-600 dark:text-amber-400 hover:underline">dpo@smtools.online</a></li>
+                  <li className="flex items-center gap-3"><Mail className="h-5 w-5 text-amber-500" /> Mail: SMTools Inc., 548 Market St #98765, San Francisco, CA 94104</li>
                 </ul>
               </div>
             </section>
@@ -332,11 +332,11 @@ export default function CookiesPage() {
                     </svg>
                   </div>
                 </div>
-                <span className="font-semibold text-lg">SocialPilot</span>
+                <span className="font-semibold text-lg">SMTools</span>
               </div>
               <p className="text-slate-400 text-sm">The fastest way to schedule &amp; publish to 5 platforms.</p>
               <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-                © 2024 SocialPilot. All rights reserved.
+                © 2024 SMTools. All rights reserved.
               </div>
             </footer>
         </div>

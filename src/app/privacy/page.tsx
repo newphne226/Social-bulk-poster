@@ -16,7 +16,7 @@ export default function PrivacyPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-semibold text-lg text-slate-900 dark:text-white">SocialPilot</span>
+              <span className="font-semibold text-lg text-slate-900 dark:text-white">SMTools</span>
             </a>
             <a href="/" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
               &larr; Back to Home
@@ -53,7 +53,7 @@ export default function PrivacyPage() {
               </h2>
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
                 <p className="text-slate-600 dark:text-slate-400">
-                  SocialPilot (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Chrome extension and related services. By using SocialPilot, you agree to the collection and use of information in accordance with this policy.
+                  SMTools (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Chrome extension and related services. By using SMTools, you agree to the collection and use of information in accordance with this policy.
                 </p>
               </div>
             </section>
@@ -87,7 +87,7 @@ export default function PrivacyPage() {
               </h2>
               <p className="text-slate-600 dark:text-slate-400 mb-4">We use collected information to:</p>
               <ul className="space-y-2 text-slate-600 dark:text-slate-400">
-                <li className="flex items-start gap-2"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" /> Provide, operate, and maintain the SocialPilot extension and services.</li>
+                <li className="flex items-start gap-2"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" /> Provide, operate, and maintain the SMTools extension and services.</li>
                 <li className="flex items-start gap-2"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" /> Process and publish your social media posts to connected platforms.</li>
                 <li className="flex items-start gap-2"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" /> Generate AI-powered captions, hashtags, and content suggestions.</li>
                 <li className="flex items-start gap-2"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" /> Optimize posting schedules for maximum engagement.</li>
@@ -219,7 +219,7 @@ export default function PrivacyPage() {
                 Cookies &amp; Tracking
               </h2>
               <p className="text-slate-600 dark:text-slate-400 mb-4">
-                SocialPilot uses cookies and similar technologies for the following purposes:
+                SMTools uses cookies and similar technologies for the following purposes:
               </p>
               <ul className="space-y-2 text-slate-600 dark:text-slate-400">
                 <li className="flex items-start gap-2"><CheckCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" /> <strong>Essential Cookies:</strong> Required for authentication and core functionality.</li>
@@ -240,7 +240,7 @@ export default function PrivacyPage() {
                 Children&apos;s Privacy
               </h2>
               <p className="text-slate-600 dark:text-slate-400">
-                SocialPilot is not intended for children under 13 (or 16 in the EU). We do not knowingly collect personal information from children. If we become aware that we have collected data from a child, we will delete it promptly.
+                SMTools is not intended for children under 13 (or 16 in the EU). We do not knowingly collect personal information from children. If we become aware that we have collected data from a child, we will delete it promptly.
               </p>
             </section>
 
@@ -272,11 +272,11 @@ export default function PrivacyPage() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
                     <Mail className="h-5 w-5 text-amber-500" />
-                    <a href="mailto:privacy@socialpilot.io" className="text-amber-600 dark:text-amber-400 hover:underline">privacy@socialpilot.io</a>
+                    <a href="mailto:privacy@smtools.online" className="text-amber-600 dark:text-amber-400 hover:underline">privacy@smtools.online</a>
                   </div>
                   <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
                     <Mail className="h-5 w-5 text-amber-500" />
-                    <a href="mailto:dpo@socialpilot.io" className="text-amber-600 dark:text-amber-400 hover:underline">dpo@socialpilot.io</a>
+                    <a href="mailto:dpo@smtools.online" className="text-amber-600 dark:text-amber-400 hover:underline">dpo@smtools.online</a>
                   </div>
                 </div>
               </div>
@@ -294,11 +294,11 @@ export default function PrivacyPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             </div>
-            <span className="font-semibold text-lg">SocialPilot</span>
+            <span className="font-semibold text-lg">SMTools</span>
           </div>
           <p className="text-slate-400 text-sm mb-4">The fastest way to schedule &amp; publish to 5 platforms.</p>
           <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-            &copy; 2024 SocialPilot. All rights reserved.
+            &copy; 2024 SMTools. All rights reserved.
           </div>
         </div>
       </footer>

@@ -71,8 +71,8 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Products & Services</h1>
-          <p className="text-sm text-slate-400">{total} total products</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Products & Services</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{total} total products</p>
         </div>
         <button onClick={() => router.push("/admin/products/new")}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition-colors">
@@ -87,7 +87,7 @@ export default function ProductsPage() {
             className={`px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
               activeType === tab.key
                 ? "bg-amber-500/20 text-amber-500 border border-amber-500/30"
-                : "bg-slate-800/50 text-slate-400 border border-slate-700 hover:text-white"
+                : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-800 hover:text-gray-900 dark:hover:text-white"
             }`}>
             {tab.label}
           </button>
@@ -97,13 +97,13 @@ export default function ProductsPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -trangray-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
           <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search products..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500" />
         </div>
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+          className="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
           <option value="">All Status</option>
           <option value="ACTIVE">Active</option>
           <option value="DRAFT">Draft</option>
@@ -123,11 +123,11 @@ export default function ProductsPage() {
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>
       ) : products.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">No products found</div>
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">No products found</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {products.map((p) => (
-            <div key={p.id} className="bg-slate-800/50 rounded-2xl border border-slate-700 p-4 hover:border-slate-600 transition-colors cursor-pointer"
+            <div key={p.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors cursor-pointer"
               onClick={() => router.push(`/admin/products/${p.id}`)}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex gap-1">
@@ -140,32 +140,32 @@ export default function ProductsPage() {
                   }`}>{p.type}</span>
                   <span className={`px-2 py-0.5 rounded-lg text-[10px] font-medium ${
                     p.status === "ACTIVE" ? "bg-green-500/10 text-green-400" :
-                    p.status === "DRAFT" ? "bg-slate-600/50 text-slate-300" :
+                    p.status === "DRAFT" ? "bg-gray-200/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-300" :
                     p.status === "ARCHIVED" ? "bg-yellow-500/10 text-yellow-400" :
                     "bg-red-500/10 text-red-400"
                   }`}>{p.status}</span>
                 </div>
                 <button onClick={(e) => { e.stopPropagation(); handleDelete(p.id, p.name); }}
-                  className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                  className="p-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
 
               <div className="flex items-center gap-3 mb-3">
-                <div className="h-12 w-12 rounded-xl bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <div className="h-12 w-12 rounded-xl bg-gray-200 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
                   {p.imageUrl ? <img src={p.imageUrl} alt="" className="h-12 w-12 rounded-xl object-cover" /> :
-                    <Package className="h-6 w-6 text-slate-400" />}
+                    <Package className="h-6 w-6 text-gray-500 dark:text-gray-400" />}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{p.name}</p>
-                  {p.sku && <p className="text-xs text-slate-500 font-mono">{p.sku}</p>}
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{p.name}</p>
+                  {p.sku && <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{p.sku}</p>}
                 </div>
               </div>
 
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-lg font-bold text-white">{formatPrice(p.price)}</p>
-                  {p.compareAtPrice && <p className="text-xs text-slate-500 line-through">{formatPrice(p.compareAtPrice)}</p>}
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">{formatPrice(p.price)}</p>
+                  {p.compareAtPrice && <p className="text-xs text-gray-500 dark:text-gray-400 line-through">{formatPrice(p.compareAtPrice)}</p>}
                 </div>
                 {p.trackInventory && (
                   <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
@@ -176,7 +176,7 @@ export default function ProductsPage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-500 border-t border-slate-700 pt-3">
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 pt-3">
                 <div className="flex items-center gap-1">
                   <Star className="h-3 w-3" /> {p.rating > 0 ? p.rating.toFixed(1) : "—"}
                   <span>({p.reviewCount})</span>
@@ -191,12 +191,12 @@ export default function ProductsPage() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-400">Showing {products.length === 0 ? 0 : (page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Showing {products.length === 0 ? 0 : (page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total}</p>
         <div className="flex gap-2">
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-sm disabled:opacity-50">Previous</button>
+            className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-800 text-gray-600 dark:text-gray-300 text-sm disabled:opacity-50">Previous</button>
           <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-sm disabled:opacity-50">Next</button>
+            className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-800 text-gray-600 dark:text-gray-300 text-sm disabled:opacity-50">Next</button>
         </div>
       </div>
     </div>

@@ -151,11 +151,11 @@ const posts = [
       <div className="bg-gradient-to-r from-amber-500 to-pink-500 rounded-2xl p-8 text-white mt-12">
         <h3 className="text-2xl font-bold mb-4">Ready to Start Growing?</h2>
         <p className="text-amber-100 mb-6 max-w-lg">
-          SocialPilot helps you schedule, optimize, and analyze your Reels across all platforms. Free 14-day trial.
+          SMTools helps you schedule, optimize, and analyze your Reels across all platforms. Free 14-day trial.
         </p>
-        <a href="https://chrome.google.com/webstore/detail/socialpilot" target="_blank" rel="noopener noreferrer">
+        <a href="https://chrome.google.com/webstore/detail/smtools" target="_blank" rel="noopener noreferrer">
           <button className="bg-white text-amber-600 hover:bg-amber-50 px-8 py-3 rounded-xl font-semibold text-lg shadow-xl">
-            Get SocialPilot Free &rarr;
+            Get SMTools Free &rarr;
           </button>
         </a>
       </div>
@@ -245,13 +245,13 @@ const posts = [
       <div className="bg-gradient-to-r from-amber-500 to-pink-500 rounded-2xl p-8 text-white mt-12">
         <h3 className="text-2xl font-bold mb-4">Ready to Scale Your LinkedIn?</h2>
         <p className="text-amber-100 mb-6 max-w-lg">
-          SocialPilot helps you schedule, analyze, and optimize your LinkedIn content alongside all your other platforms.
+          SMTools helps you schedule, analyze, and optimize your LinkedIn content alongside all your other platforms.
         </p>
-        <a href="https://chrome.google.com/webstore/detail/socialpilot" target="_blank" rel="noopener noreferrer">
+        <a href="https://chrome.google.com/webstore/detail/smtools" target="_blank" rel="noopener noreferrer">
           <button className="bg-white text-amber-600 hover:bg-amber-50 px-8 py-3 rounded-xl font-semibold text-lg shadow-xl">
             <span className="flex items-center gap-2">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2-2v14a2 2 0 002 2z" /></svg>
-              Try SocialPilot Free
+              Try SMTools Free
             </span>
           </button>
         </a>
@@ -279,14 +279,14 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2-2v14a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-semibold text-lg text-slate-900 dark:text-white">SocialPilot</span>
+              <span className="font-semibold text-lg text-slate-900 dark:text-white">SMTools</span>
             </div>
             <nav className="hidden md:flex items-center gap-6">
               <Link href="/" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Home</Link>
               <Link href="/blog" className="text-sm font-medium text-amber-600 dark:text-amber-400">Blog</Link>
               <Link href="/features" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Features</Link>
               <Link href="/pricing" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Pricing</Link>
-              <a href="https://chrome.google.com/webstore/detail/socialpilot" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-amber-500/25">Get Extension</a>
+              <a href="https://chrome.google.com/webstore/detail/smtools" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-amber-500/25">Get Extension</a>
             </nav>            </div>
           </div>
         </header>
@@ -371,7 +371,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2-2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <span className="font-semibold text-lg">SocialPilot</span>
+                <span className="font-semibold text-lg">SMTools</span>
               </div>
               <p className="text-slate-400 text-sm">The fastest way to schedule &amp; publish to 5 platforms.</p>
             </div>
@@ -403,7 +403,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-            &copy; 2024 SocialPilot. All rights reserved.
+            &copy; 2024 SMTools. All rights reserved.
           </div>
         </div>
       </footer>

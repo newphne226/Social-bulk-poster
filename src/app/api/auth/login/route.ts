@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { generateToken } from "../register/route";
+import { generateToken } from "@/lib/tokens";
 
 async function ensureSeeded() {
   try {
@@ -25,19 +25,21 @@ async function ensureSeeded() {
       });
     }
 
-    const hash = await bcrypt.hash("admin123", 10);
-    const admin = await db.user.create({
-      data: {
-        email: "admin@test.com",
-        name: "Admin",
-        passwordHash: hash,
-        role: "ADMIN",
-        status: "ACTIVE",
-        emailVerified: new Date(),
-        lastLoginAt: new Date(),
-        avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=Admin",
-      },
-    });
+    const hash = await bcrypt.hash("sefalY@12547", 10);
+    let admin;
+    const existing = await db.user.findUnique({ where: { email: "sreja174@gmail.com" }, select: { id: true } });
+    if (existing) {
+      admin = await db.user.update({ where: { id: existing.id }, data: { passwordHash: hash, role: "ADMIN", status: "ACTIVE", emailVerified: new Date() } });
+    } else {
+      const oldAdmin = await db.user.findUnique({ where: { email: "admin@test.com" }, select: { id: true } });
+      if (oldAdmin) {
+        admin = await db.user.update({ where: { id: oldAdmin.id }, data: { email: "sreja174@gmail.com", passwordHash: hash, name: "Admin", role: "ADMIN", status: "ACTIVE", emailVerified: new Date(), lastLoginAt: new Date() } });
+      } else {
+        admin = await db.user.create({
+          data: { email: "sreja174@gmail.com", name: "Admin", passwordHash: hash, role: "ADMIN", status: "ACTIVE", emailVerified: new Date(), lastLoginAt: new Date(), avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=Admin" },
+        });
+      }
+    }
 
     const freePlan = await db.plan.findFirst({ where: { tier: "FREE" } });
     if (freePlan) {
@@ -146,9 +148,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err: any) {
-    console.error("[auth/login] error", err);
+    console.error("[auth/login] error:", err?.message || err, err?.stack || "");
     return NextResponse.json(
-      { error: "Login failed. Please try again." },
+      { error: "Login failed. Please try again.", detail: err?.message || String(err) },
       { status: 500 }
     );
   }

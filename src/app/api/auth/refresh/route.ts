@@ -1,7 +1,7 @@
 // POST /api/auth/refresh — refreshes an auth token.
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { generateToken, verifyToken } from "../register/route";
+import { generateToken, verifyToken } from "@/lib/tokens";
 
 export async function POST(request: NextRequest) {
   const header = request.headers.get("authorization") ?? "";

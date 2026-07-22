@@ -67,7 +67,7 @@ export default function SignUpPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Account created!</h1>
-          <p className="text-slate-500 dark:text-slate-400">Welcome to SocialPilot. Redirecting...</p>
+          <p className="text-slate-500 dark:text-slate-400">Welcome to SMTools. Redirecting...</p>
         </div>
       </div>
     );
@@ -84,7 +84,7 @@ export default function SignUpPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             </div>
-            <span className="text-xl font-bold text-slate-900 dark:text-white">SocialPilot</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white">SMTools</span>
           </a>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Create your account</h1>
           <p className="text-slate-500 dark:text-slate-400">Start managing your social media today</p>

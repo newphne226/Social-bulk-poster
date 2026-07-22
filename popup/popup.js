@@ -1,5 +1,5 @@
 /* ===================================================================
-   SocialPilot Extension — Popup Logic (Clean Rewrite)
+   SMTools Extension — Popup Logic (Clean Rewrite)
    =================================================================== */
 
 const API = "https://smtools.online/api";
@@ -422,7 +422,7 @@ async function handleCreatePost(status) {
 }
 
 async function handleLogout() {
-  if (!confirm("Log out of SocialPilot?")) return;
+  if (!confirm("Log out of SMTools?")) return;
   await chrome.storage.local.remove(["token", "user", "accounts", "posts", "settings", "subscription"]);
   state = { user: null, posts: [], accounts: [], settings: {} };
   showScreen("auth");

@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/app/api/auth/register/route";
+import { verifyToken } from "@/lib/tokens";
 
 const FB_APP_ID = process.env.FACEBOOK_APP_ID || "";
-const REDIRECT_URI = process.env.NEXT_PUBLIC_SITE_URL
-  ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/accounts/facebook/callback`
-  : "https://smtools.online/api/accounts/facebook/callback";
+const REDIRECT_URI = "https://smtools.online/api/accounts/facebook/callback";
 
-const FB_SCOPES = "pages_manage_posts,pages_read_engagement,pages_show_list,basic_profile";
+const FB_SCOPES = "public_profile,email";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -28,7 +26,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const fbAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${FB_SCOPES}&state=${encodeURIComponent(token)}&response_type=code`;
+  const fbAuthUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${FB_SCOPES}&state=${encodeURIComponent(token)}&response_type=code`;
 
   return NextResponse.redirect(fbAuthUrl);
 }
