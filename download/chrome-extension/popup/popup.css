@@ -135,19 +135,6 @@ body.dark .divider span { background: var(--bg); }
 }
 .btn-google:hover { background: var(--bg-muted); }
 
-.btn-facebook {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%;
-  padding: 9px;
-  border: 1px solid #1877F2;
-  border-radius: 8px;
-  background: #1877F2;
-  color: white;
-  font-size: 13px; font-weight: 500;
-  cursor: pointer;
-}
-.btn-facebook:hover { background: #166fe5; }
-
 .security-note { text-align: center; margin-top: 20px; font-size: 10px; color: var(--text-muted); }
 
 /* ----- Auth tabs (Sign In / Sign Up) ----- */

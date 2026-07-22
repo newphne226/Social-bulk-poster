@@ -575,50 +575,10 @@ chrome.notifications.onClicked.addListener((notificationId) => {
   })();
 });
 
-// Detect Facebook/Google login completion from tab URL changes
+// Detect Google login completion from tab URL changes
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!changeInfo.url) return;
   const url = changeInfo.url;
-
-  // Facebook login completion
-  if (url.includes("/auth/facebook-complete")) {
-    try {
-      const urlObj = new URL(url);
-      const token = urlObj.searchParams.get("token");
-      const error = urlObj.searchParams.get("error");
-
-      if (error) {
-        console.warn("[SMTools] Facebook login error:", error);
-        return;
-      }
-
-      if (token && token.startsWith("sp_")) {
-        console.log("[SMTools] Facebook login detected — storing token");
-        await setToken(token, true);
-
-        // Fetch full user data from API
-        try {
-          const res = await fetch(`${API_BASE}/auth/me`, {
-            headers: { "Authorization": `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            await chrome.storage.local.set({ user: data.user, subscription: data.subscription });
-          }
-        } catch (e) {
-          console.warn("[SMTools] Failed to fetch user data after Facebook login:", e);
-        }
-
-        // Close the tab
-        try { await chrome.tabs.remove(tabId); } catch {}
-
-        // Sync data
-        syncData(token).catch((e) => console.warn("[SMTools] post-facebook sync failed", e));
-      }
-    } catch (e) {
-      console.warn("[SMTools] Failed to parse Facebook login URL:", e);
-    }
-  }
 
   // Google login completion
   if (url.includes("/auth/google-complete")) {
