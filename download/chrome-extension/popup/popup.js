@@ -1038,7 +1038,8 @@ async function handleConnectAccount(platform) {
     return;
   }
   const webOrigin = API_BASE.replace(/\/api\/?$/, "");
-  const url = `${webOrigin}/api/accounts/${platform}?token=${encodeURIComponent(token)}`;
+  const apiPath = platform === "x" ? "twitter" : platform;
+  const url = `${webOrigin}/api/accounts/${apiPath}?token=${encodeURIComponent(token)}`;
   chrome.tabs.create({ url });
   showToast(`Opening ${PLATFORMS[platform]?.name || platform} connect...`, "info");
 }

@@ -6,11 +6,11 @@ import { Globe, Trash2, CheckCircle, ExternalLink, Lock } from "lucide-react";
 
 const API = "/api";
 
-const PLATFORMS: Record<string, { name: string; color: string; icon: string; available: boolean; description: string }> = {
-  linkedin: { name: "LinkedIn", color: "#0A66C2", icon: "in", available: true, description: "Connect LinkedIn to schedule posts and updates" },
-  x: { name: "X (Twitter)", color: "#000000", icon: "X", available: true, description: "Connect X/Twitter to schedule tweets and updates" },
-  instagram: { name: "Instagram", color: "#E4405F", icon: "IG", available: false, description: "Coming soon — Instagram scheduling" },
-  pinterest: { name: "Pinterest", color: "#BD081C", icon: "P", available: false, description: "Coming soon — Pinterest scheduling" },
+const PLATFORMS: Record<string, { name: string; color: string; icon: string; available: boolean; description: string; apiPath: string }> = {
+  linkedin: { name: "LinkedIn", color: "#0A66C2", icon: "in", available: true, description: "Connect LinkedIn to schedule posts and updates", apiPath: "linkedin" },
+  x: { name: "X (Twitter)", color: "#000000", icon: "X", available: true, description: "Connect X/Twitter to schedule tweets and updates", apiPath: "twitter" },
+  instagram: { name: "Instagram", color: "#E4405F", icon: "IG", available: false, description: "Coming soon — Instagram scheduling", apiPath: "instagram" },
+  pinterest: { name: "Pinterest", color: "#BD081C", icon: "P", available: false, description: "Coming soon — Pinterest scheduling", apiPath: "pinterest" },
 };
 
 export default function AccountsPage() {
@@ -54,7 +54,7 @@ export default function AccountsPage() {
       return;
     }
     setConnecting(true);
-    window.location.href = `${API}/accounts/${platform}?token=${encodeURIComponent(token)}`;
+    window.location.href = `${API}/accounts/${PLATFORMS[platform]?.apiPath || platform}?token=${encodeURIComponent(token)}`;
   }
 
   async function removeAccount(id: string) {
